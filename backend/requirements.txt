@@ -1,0 +1,11 @@
+fastapi
+uvicorn[standard]  # 用于运行 FastAPI 应用
+python-dotenv      # 用于加载 .env 文件
+langchain
+langchain-community
+langchain-ollama
+faiss-cpu          # 或者 faiss-gpu 如果您有兼容的NVIDIA显卡
+requests           # 用于调用外部API，如DeepSeek
+python-multipart   # FastAPI 处理文件上传需要
+# 如果您打算用 Ollama 运行本地大模型作为生成器，而不是DeepSeek，
+# 那么对requests的依赖可能就没那么直接，但通常还是有用的。
