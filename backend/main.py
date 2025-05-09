@@ -16,14 +16,14 @@ else:
     print(f"--- DEBUG [main.py]: .env file NOT found at {DOTENV_PATH}. Attempting default load_dotenv(). ---")
     load_dotenv(verbose=True)
 
-from fastapi import FastAPI, HTTPException, Form, File, UploadFile # <--- 确保 File, UploadFile 已导入
+from fastapi import FastAPI, HTTPException, Form, File, UploadFile
 from typing import List, Dict, Any
-import shutil # <--- 导入 shutil 用于文件操作
+import shutil
 
 # 从其他模块导入函数和变量
 from .knowledge_base_processor import create_index_from_files
 from .qa_handler import retrieve_context, reload_vector_db, get_final_answer
-from .config import UPLOAD_FOLDER # <--- 导入 UPLOAD_FOLDER
+from .config import UPLOAD_FOLDER
 
 app = FastAPI(title="GadgetGuide AI API")
 
@@ -59,34 +59,27 @@ async def upload_documents_endpoint(files: List[UploadFile] = File(...)):
     if not files:
         raise HTTPException(status_code=400, detail="没有选择任何文件进行上传。")
 
-    processed_files_info = [] # 存储每个文件的处理信息
-    files_to_index = []       # 存储成功保存并准备用于索引的文件名
+    processed_files_info = []
+    files_to_index = []
 
     for file in files:
-        # 构建保存路径
-        # 为安全起见，通常会对文件名进行清理或生成唯一ID，这里我们先直接使用原始文件名
         file_path_on_server = Path(UPLOAD_FOLDER) / file.filename
-        
         try:
-            # 保存上传的文件
             with open(file_path_on_server, "wb+") as buffer:
                 shutil.copyfileobj(file.file, buffer)
-            
-            files_to_index.append(file.filename) # 将文件名（非完整路径）添加到待索引列表
+            files_to_index.append(file.filename)
             processed_files_info.append({"filename": file.filename, "status": "上传成功"})
             print(f"文件 '{file.filename}' 已成功上传并保存到 '{file_path_on_server}'")
-
         except Exception as e:
             print(f"保存文件 '{file.filename}' 时出错: {e}")
             processed_files_info.append({"filename": file.filename, "status": "上传失败", "error": str(e)})
         finally:
-            file.file.close() # 确保关闭文件对象
+            file.file.close()
 
-    if not files_to_index: # 如果没有任何文件成功保存以上传
+    if not files_to_index:
         raise HTTPException(status_code=400, detail="所有文件都未能成功保存以进行处理。")
 
     print(f"准备使用以下已上传的文件名处理知识库: {files_to_index}")
-    # 调用知识库处理函数，传入的是在 UPLOAD_FOLDER 中的文件名列表
     if create_index_from_files(files_to_index):
         if reload_vector_db():
             return {
@@ -102,32 +95,38 @@ async def upload_documents_endpoint(files: List[UploadFile] = File(...)):
                 "warning": "Index reload failed."
             }
     else:
-        # 如果 create_index_from_files 失败，上传的文件仍在，但索引未成功更新
         raise HTTPException(
             status_code=500,
             detail=f"文件已上传，但在处理知识库和创建/更新索引时发生错误。请检查服务器日志。",
-            headers={"X-Processed-Files-Details": str(processed_files_info)} # 可以通过headers传递一些信息
+            headers={"X-Processed-Files-Details": str(processed_files_info)}
         )
 
 
-@app.post("/retrieve_context", response_model=Dict[str, Any]) 
+@app.post("/retrieve_context", response_model=Dict[str, Any])
 async def retrieve_context_endpoint(query: str = Form(...)):
     if not query.strip():
         raise HTTPException(status_code=400, detail="查询不能为空。")
-    result = retrieve_context(query) 
-    if result.get("error"): 
+    result = retrieve_context(query)
+    if result.get("error"):
         raise HTTPException(status_code=500, detail=result["error"])
     return result
 
-@app.post("/build_index_from_sample") 
+@app.post("/build_index_from_sample")
 async def build_index_from_sample_endpoint():
-    sample_files = ["sample_apple_info.txt"] 
+    """
+    (临时端点) 使用 uploads/ 目录中指定的文件列表创建或更新索引。
+    """
+    # !!! 请确保以下文件名与您 backend/uploads/ 文件夹中的实际文件名完全一致 !!!
+    sample_files = [
+        "iPhone 15 Pro - 技术规格 - 官方 Apple 支持 (中国).pdf",
+        "iPhone 16 Pro - Tech Specs - Apple Support.pdf", # <--- 请替换为您的iPhone 16 Pro PDF的准确文件名
+        "sample_apple_info.txt"  # <--- 请替换为您示例TXT文件的准确文件名 (如果名称不同)
+    ]
+    print(f"准备使用以下文件列表构建/更新索引: {sample_files}")
     if create_index_from_files(sample_files):
-        if reload_vector_db(): 
-             return {"message": f"索引已成功基于 {sample_files} 创建/更新，并已重新加载。"}
+        if reload_vector_db():
+             return {"message": f"索引已成功基于 {len(sample_files)} 个文件创建/更新，并已重新加载。文件列表: {sample_files}"}
         else:
-            return {"message": f"索引已成功基于 {sample_files} 创建/更新，但重新加载到服务时可能存在问题或索引仍为空。请检查日志。"}
+            return {"message": f"索引已成功基于 {len(sample_files)} 个文件创建/更新，但重新加载到服务时可能存在问题或索引仍为空。文件列表: {sample_files}，请检查日志。"}
     else:
-        raise HTTPException(status_code=500, detail=f"基于 {sample_files} 创建/更新索引失败。请检查服务器日志获取详细信息。")
-
-# 原来的 TODO 注释可以移除了，因为我们已经实现了 /upload-documents 端点
+        raise HTTPException(status_code=500, detail=f"基于指定文件列表创建/更新索引失败。请检查服务器日志获取详细信息。")
