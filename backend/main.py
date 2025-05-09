@@ -17,6 +17,7 @@ else:
     load_dotenv(verbose=True)
 
 from fastapi import FastAPI, HTTPException, Form, File, UploadFile
+from fastapi.middleware.cors import CORSMiddleware # <--- 1. 导入 CORSMiddleware
 from typing import List, Dict, Any
 import shutil
 
@@ -26,6 +27,26 @@ from .qa_handler import retrieve_context, reload_vector_db, get_final_answer
 from .config import UPLOAD_FOLDER
 
 app = FastAPI(title="GadgetGuide AI API")
+
+# --- 2. CORS (跨源资源共享) 配置 ---
+# 定义允许访问您的 API 的源 (前端应用的地址)
+# 在开发环境中，Vue CLI 的默认端口通常是 8080 或 8081 等
+# 如果您的 Vue 前端运行在其他端口，请相应修改或添加
+origins = [
+    "http://localhost:8080", # 假设您的 Vue.js 开发服务器运行在此端口
+    "http://localhost:8081", # 备用端口，以防万一
+    # 如果您有其他前端源，也需要在这里添加
+]
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,       # 允许访问的源列表
+    allow_credentials=True,      # 是否支持携带 cookie
+    allow_methods=["*"],         # 允许所有 HTTP 方法 (GET, POST, PUT, DELETE 等)
+    allow_headers=["*"],         # 允许所有 HTTP 请求头
+)
+# --- CORS 配置结束 ---
+
 
 @app.on_event("startup")
 async def startup_event():
@@ -53,9 +74,6 @@ async def ask_question_endpoint(query: str = Form(...)):
 
 @app.post("/upload-documents/", response_model=Dict[str, Any])
 async def upload_documents_endpoint(files: List[UploadFile] = File(...)):
-    """
-    接收上传的一个或多个文档，保存它们，然后处理并更新知识库索引。
-    """
     if not files:
         raise HTTPException(status_code=400, detail="没有选择任何文件进行上传。")
 
@@ -113,9 +131,6 @@ async def retrieve_context_endpoint(query: str = Form(...)):
 
 @app.post("/build_index_from_sample")
 async def build_index_from_sample_endpoint():
-    """
-    (临时端点) 使用 uploads/ 目录中指定的文件列表创建或更新索引。
-    """
     # !!! 请确保以下文件名与您 backend/uploads/ 文件夹中的实际文件名完全一致 !!!
     sample_files = [
         "iPhone 15 Pro - 技术规格 - 官方 Apple 支持 (中国).pdf",
