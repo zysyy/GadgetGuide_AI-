@@ -35,7 +35,7 @@ def retrieve_context(query: str) -> dict: # 添加返回类型提示
 
     try:
         print(f"qa_handler.retrieve_context: 正在为查询 '{query}' 检索上下文...")
-        results = vector_db.similarity_search(query, k=3) # k=3 表示返回3个最相关的片段
+        results = vector_db.similarity_search(query, k=10) # k=10 表示返回10个最相关的片段
         
         if not results:
             print(f"qa_handler.retrieve_context: 未能为查询 '{query}' 找到相关信息。")

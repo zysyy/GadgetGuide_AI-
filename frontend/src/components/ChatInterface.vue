@@ -4,7 +4,8 @@
         <div v-for="(message, index) in messages" :key="index"
              :class="['message-bubble', message.sender === 'user' ? 'user-message' : 'bot-message']">
           <p><strong>{{ message.sender === 'user' ? '您' : 'GadgetGuide AI' }}:</strong></p>
-          <p>{{ message.text }}</p>
+          <div v-if="message.sender === 'bot'" class="markdown-content" v-html="renderMarkdown(message.text)"></div>
+          <p v-else>{{ message.text }}</p>
         </div>
       </div>
       <div class="input-area">
@@ -24,71 +25,67 @@
   
   <script setup>
   import { ref, nextTick } from 'vue';
-  import axios from 'axios'; // 确保您已经通过 npm install axios 安装了它
+  import axios from 'axios';
+  import { marked } from 'marked';     // <--- 1. 导入 marked
+  import DOMPurify from 'dompurify'; // <--- 2. 导入 DOMPurify
   
   // 响应式变量
-  const userInput = ref(''); // 绑定到输入框的用户输入
-  const messages = ref([]);  // 存储聊天记录的数组，格式: { sender: 'user'/'bot', text: '...' }
-  const isLoading = ref(false); // API 请求的加载状态
-  const chatBox = ref(null); // 对聊天框 DOM 元素的引用，用于自动滚动
+  const userInput = ref('');
+  const messages = ref([]);
+  const isLoading = ref(false);
+  const chatBox = ref(null);
   
-  // 后端 API 地址 - 请确保这与您 FastAPI 后端的地址和端口一致
   const API_URL = 'http://127.0.0.1:8000/ask';
   
-  // 辅助函数：在消息列表更新后自动滚动到底部
   const scrollToBottom = () => {
-    nextTick(() => { // nextTick 确保 DOM 已经更新完毕
+    nextTick(() => {
       if (chatBox.value) {
         chatBox.value.scrollTop = chatBox.value.scrollHeight;
       }
     });
   };
   
-  // 发送消息的函数
+  // 3. 创建一个方法来解析 Markdown 并净化 HTML
+  const renderMarkdown = (markdownText) => {
+    if (typeof markdownText !== 'string') {
+      return ''; // 或者返回一些默认的错误提示文本
+    }
+    // 先用 marked 将 markdown 转为 HTML，然后用 DOMPurify 清理它
+    const rawHtml = marked.parse(markdownText);
+    return DOMPurify.sanitize(rawHtml);
+  };
+  
   const sendMessage = async () => {
-    const query = userInput.value.trim(); // 获取用户输入并去除首尾空格
-    if (!query || isLoading.value) return; // 如果输入为空或正在加载中，则不执行
+    const query = userInput.value.trim();
+    if (!query || isLoading.value) return;
   
-    isLoading.value = true; // 设置加载状态为 true
-  
-    // 1. 将用户输入添加到聊天记录中
+    isLoading.value = true;
     messages.value.push({ sender: 'user', text: query });
-    userInput.value = ''; // 清空输入框
-    scrollToBottom(); // 滚动到底部
+    userInput.value = '';
+    scrollToBottom();
   
-    // 2. 准备发送给 FastAPI 后端的数据
-    // FastAPI 的 Form(...) 参数通常需要 FormData 对象
     const formData = new FormData();
     formData.append('query', query);
   
     try {
-      // 3. 发送 POST 请求到后端
       const response = await axios.post(API_URL, formData, {
-        headers: {
-          // FastAPI 使用 Form 时，axios 通常会自动设置正确的 Content-Type
-          // 但如果遇到问题，可以尝试明确指定 'multipart/form-data'
-          // 'Content-Type': 'multipart/form-data', 
-        }
+        // headers: { 'Content-Type': 'multipart/form-data' } // axios 通常会自动处理 FormData
       });
   
-      // 4. 处理后端响应
       if (response.data && response.data.answer) {
         messages.value.push({ sender: 'bot', text: response.data.answer });
-      } else if (response.data && response.data.message) { // 兼容只返回 message 的情况
+      } else if (response.data && response.data.message) {
         messages.value.push({ sender: 'bot', text: response.data.message });
-      }
-      else {
+      } else {
         messages.value.push({ sender: 'bot', text: '抱歉，未能获取到有效的回答格式。' });
       }
     } catch (error) {
       console.error('API请求错误:', error);
       let errorMessage = '抱歉，与服务器通信时发生错误。';
-      // 尝试从错误响应中获取更具体的错误信息
       if (error.response && error.response.data && error.response.data.detail) {
         if (typeof error.response.data.detail === 'string') {
           errorMessage = `错误: ${error.response.data.detail}`;
         } else if (Array.isArray(error.response.data.detail) && error.response.data.detail.length > 0 && error.response.data.detail[0].msg) {
-          // 处理 FastAPI 校验错误
           errorMessage = `输入错误: ${error.response.data.detail[0].msg}`;
         }
       } else if (error.message) {
@@ -96,8 +93,8 @@
       }
       messages.value.push({ sender: 'bot', text: errorMessage });
     } finally {
-      isLoading.value = false; // 请求完成后，设置加载状态为 false
-      scrollToBottom(); // 再次滚动到底部，确保新消息可见
+      isLoading.value = false;
+      scrollToBottom();
     }
   };
   </script>
@@ -106,41 +103,36 @@
   .chat-container {
     display: flex;
     flex-direction: column;
-    height: 80vh; /* 或者您希望的聊天框高度 */
-    max-width: 700px; /* 聊天框最大宽度 */
-    min-width: 350px; /* 聊天框最小宽度 */
-    margin: 20px auto; /* 页面居中显示 */
+    height: 80vh;
+    max-width: 700px;
+    min-width: 350px;
+    margin: 20px auto;
     border: 1px solid #e0e0e0;
     border-radius: 8px;
     box-shadow: 0 4px 12px rgba(0,0,0,0.1);
     background-color: #ffffff;
-    overflow: hidden; /* 确保子元素不会溢出圆角 */
+    overflow: hidden;
   }
   
   .chat-box {
-    flex-grow: 1; /* 占据剩余空间 */
+    flex-grow: 1;
     padding: 20px;
-    overflow-y: auto; /* 内容超出时显示滚动条 */
-    background-color: #f9f9f9; /* 聊天区域背景色 */
+    overflow-y: auto;
+    background-color: #f9f9f9;
     border-bottom: 1px solid #e0e0e0;
   }
   
   .message-bubble {
-    display: inline-block; /* 让气泡宽度自适应内容 */
-    clear: both; /* 确保气泡不会互相重叠 */
+    display: inline-block;
+    clear: both;
     margin-bottom: 15px;
     padding: 10px 15px;
     border-radius: 18px;
-    max-width: 75%; /* 气泡最大宽度，避免太长 */
-    word-wrap: break-word; /* 长单词或链接换行 */
+    max-width: 75%;
+    word-wrap: break-word;
     box-shadow: 0 1px 3px rgba(0,0,0,0.08);
   }
   
-  .message-bubble p {
-    margin: 0;
-    line-height: 1.5; /* 增加行高，提升可读性 */
-    white-space: pre-wrap; /* 保留换行符和空格 */
-  }
   .message-bubble p:first-child { /* 发送者名称样式 */
     font-weight: bold;
     margin-bottom: 4px;
@@ -148,27 +140,65 @@
     color: #555;
   }
   
+  /* --- 4. 为 Markdown 内容添加一个容器样式 (可选) --- */
+  .markdown-content {
+    line-height: 1.6; /* Markdown 内容通常需要更好的行高 */
+    white-space: pre-wrap; /* 保留 Markdown 生成的换行和空格 */
+  }
+  /* 你可能还需要为 Markdown 生成的特定 HTML 标签（如 h1, h2, ul, li, code, blockquote 等）添加样式 */
+  .markdown-content :deep(h1), .markdown-content :deep(h2), .markdown-content :deep(h3) {
+    margin-top: 0.8em;
+    margin-bottom: 0.4em;
+    line-height: 1.2;
+  }
+  .markdown-content :deep(ul), .markdown-content :deep(ol) {
+    padding-left: 20px;
+  }
+  .markdown-content :deep(li) {
+    margin-bottom: 0.2em;
+  }
+  .markdown-content :deep(p) {
+    margin-top: 0;
+    margin-bottom: 0.5em;
+  }
+  .markdown-content :deep(pre) { /* 代码块样式 */
+    background-color: #f0f0f0;
+    padding: 10px;
+    border-radius: 4px;
+    overflow-x: auto;
+  }
+  .markdown-content :deep(code) { /*行内代码样式 */
+    background-color: #f0f0f0;
+    padding: 2px 4px;
+    border-radius: 3px;
+    font-family: Consolas, Monaco, 'Andale Mono', 'Ubuntu Mono', monospace;
+  }
+  
+  
   .user-message {
-    background-color: #007bff; /* 用户消息背景色 */
+    background-color: #007bff;
     color: white;
-    float: right; /* 用户消息靠右 */
-    margin-left: 25%; /* 确保不会占满整行 */
-    border-bottom-right-radius: 5px; /* 调整气泡尖角效果 */
+    float: right;
+    margin-left: 25%;
+    border-bottom-right-radius: 5px;
   }
   .user-message p:first-child {
-    color: #e0e0e0; /* 用户名称颜色浅一点 */
+    color: #e0e0e0;
   }
   
   
   .bot-message {
-    background-color: #e9ecef; /* AI消息背景色 */
+    background-color: #e9ecef;
     color: #212529;
-    float: left; /* AI消息靠左 */
-    margin-right: 25%; /* 确保不会占满整行 */
-    border-bottom-left-radius: 5px; /* 调整气泡尖角效果 */
+    float: left;
+    margin-right: 25%;
+    border-bottom-left-radius: 5px;
   }
-  .bot-message p:first-child {
-    color: #007bff; /* AI名称颜色 */
+  .bot-message p:first-child { /* AI 发送者名称 */
+    color: #007bff;
+  }
+  .bot-message .markdown-content :deep(p):first-child { /* 修正：如果Markdown内容以<p>开头，可能不需要额外的上边距 */
+      margin-top: 0;
   }
   
   
@@ -176,21 +206,21 @@
     display: flex;
     padding: 15px;
     border-top: 1px solid #e0e0e0;
-    background-color: #f8f9fa; /* 输入区域背景色 */
+    background-color: #f8f9fa;
   }
   
   .input-area input {
     flex-grow: 1;
     padding: 12px 15px;
     border: 1px solid #ced4da;
-    border-radius: 20px; /* 圆角输入框 */
+    border-radius: 20px;
     margin-right: 10px;
     font-size: 1em;
-    outline: none; /* 去除点击时的默认边框 */
+    outline: none;
   }
   .input-area input:focus {
-    border-color: #80bdff; /* 输入框获取焦点时的边框颜色 */
-    box-shadow: 0 0 0 0.2rem rgba(0,123,255,.25); /* 输入框获取焦点时的阴影 */
+    border-color: #80bdff;
+    box-shadow: 0 0 0 0.2rem rgba(0,123,255,.25);
   }
   
   .input-area button {
@@ -198,17 +228,17 @@
     background-color: #007bff;
     color: white;
     border: none;
-    border-radius: 20px; /* 圆角按钮 */
+    border-radius: 20px;
     cursor: pointer;
     font-size: 1em;
-    transition: background-color 0.2s ease-in-out; /* 过渡效果 */
+    transition: background-color 0.2s ease-in-out;
   }
   
   .input-area button:hover:not(:disabled) {
-    background-color: #0056b3; /* 按钮悬停颜色 */
+    background-color: #0056b3;
   }
   .input-area button:disabled {
-    background-color: #cccccc; /* 按钮禁用颜色 */
+    background-color: #cccccc;
     cursor: not-allowed;
   }
   </style>
