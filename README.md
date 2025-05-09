@@ -1,4 +1,4 @@
-/qasystem_project             # 项目根目录
+```/qasystem_project             # 项目根目录
     ├── backend/                  # 所有后端代码存放于此
     │   ├── main.py               # FastAPI 应用实例和主要的 API 路由
     │   ├── knowledge_base_processor.py # 知识库加载、处理、索引模块
@@ -16,4 +16,4 @@
     │   └── ...
     │
     ├── .gitignore                # 指定 Git 应忽略的文件和目录
-    └── README.md                 # 项目说明文件
+    └── README.md                 # 项目说明文件```
