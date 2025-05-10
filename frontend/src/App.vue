@@ -7,7 +7,7 @@
       <ChatInterface />
     </main>
     <footer class="app-footer">
-      <p>&copy; {{ new Date().getFullYear() }} GadgetGuide AI. All rights reserved (for demonstration).</p>
+      <p>&copy; {{ new Date().getFullYear() }} GadgetGuide AI. (Demonstration Purposes)</p>
       </footer>
   </div>
 </template>
@@ -21,20 +21,12 @@ import ChatInterface from './components/ChatInterface.vue';
 </script>
 
 <style>
-/* 全局样式或 App.vue 的特定样式 */
-/* 为了避免样式冲突并保持组件的封装性，通常推荐将大部分样式
-  写在各个组件内部的 <style scoped> 中。
-  这里的样式是针对整个应用的根元素 #app 和一些基本布局。
+/* App.vue 的样式通常是全局的，或者只针对 #app 及其直接子元素的基础布局。
+  我们在这里使用之前在 theme.css 中定义的 CSS 变量。
+  确保 theme.css 已经在 main.js 中被正确导入。
 */
 
-/* 重置一些默认样式，可选 */
-body, html {
-  margin: 0;
-  padding: 0;
-  height: 100%;
-  font-family: Avenir, Helvetica, Arial, sans-serif; /* 与 Vue 默认字体一致 */
-  background-color: #f4f7f6; /* 给页面一个浅色背景 */
-}
+/* body, html 的基础样式已在 theme.css 中设置 (font-family, background-color) */
 
 #app {
   -webkit-font-smoothing: antialiased;
@@ -42,36 +34,41 @@ body, html {
   display: flex;
   flex-direction: column;
   min-height: 100vh; /* 让 #app 至少占据整个视口高度 */
-  color: #2c3e50;
+  color: var(--color-text-primary); /* 全局主要文字颜色 */
 }
 
 .app-header {
-  background-color: #343a40; /* 深色页眉背景 */
-  color: white;
-  padding: 15px 30px;
+  background-color: var(--color-primary-deep-blue); /* 使用深蓝色作为页眉背景 */
+  color: var(--color-text-light); /* 页眉文字使用浅色 */
+  padding: calc(var(--spacing-unit, 8px) * 2) calc(var(--spacing-unit, 8px) * 3); /* 使用间距变量 */
   text-align: center;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  box-shadow: 0 2px 5px rgba(0,0,0,0.15); /* 稍微调整阴影 */
+  border-bottom: 3px solid var(--color-primary-light-blue); /* 添加一个亮蓝色下边框增加层次感 */
 }
 
 .app-header h1 {
   margin: 0;
-  font-size: 1.8em;
+  font-size: 1.9em; /* 稍微增大标题 */
+  font-weight: 600; /* 标题字重调整 */
 }
 
 .app-main {
   flex-grow: 1; /* 让主内容区域占据剩余空间 */
-  padding: 20px; /* 给主内容区域一些内边距 */
-  display: flex; /* 使用 flex 布局来居中聊天组件 */
-  justify-content: center; /* 水平居中 */
-  align-items: flex-start; /* 垂直方向上，如果内容不足，从顶部开始对齐 */
+  padding: calc(var(--spacing-unit, 8px) * 2.5); /* 使用间距变量调整内边距 */
+  display: flex;
+  justify-content: center;
+  align-items: flex-start; /* 或者 center, 确保聊天容器的对齐方式 */
+  /* background-color: var(--color-background-page); /* 主内容区域背景已由body继承 */
 }
 
 .app-footer {
-  background-color: #343a40; /* 深色页脚背景 */
-  color: #adb5bd; /* 页脚文字颜色浅一些 */
+  background-color: var(--color-primary-medium-blue); /* 页脚使用中蓝色 */
+  color: var(--color-accent-green); /* 页脚文字使用浅绿色，与深蓝背景形成对比 */
+  /* 或者 color: color-mix(in srgb, var(--color-text-light) 80%, transparent); 更柔和的浅色 */
   text-align: center;
-  padding: 15px;
+  padding: calc(var(--spacing-unit, 8px) * 1.5);
   font-size: 0.85em;
   margin-top: auto; /* 将页脚推到底部，即使内容不足 */
+  border-top: 1px solid var(--color-primary-light-blue); /* 页脚上边框 */
 }
 </style>

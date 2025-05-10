@@ -27,6 +27,6 @@ os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 os.makedirs(FAISS_INDEX_PATH, exist_ok=True)
 
 # 其他配置可以放这里，比如文本分割参数等
-CHUNK_SIZE = 500
-CHUNK_OVERLAP = 50
+CHUNK_SIZE = 350
+CHUNK_OVERLAP = 70
 
