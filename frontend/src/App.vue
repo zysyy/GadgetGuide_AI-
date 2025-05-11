@@ -2,31 +2,32 @@
   <div id="app">
     <header class="app-header">
       <h1>GadgetGuide AI</h1>
-      </header>
+      <nav class="app-nav">
+        <router-link to="/chat">智能问答</router-link>
+        <router-link to="/upload">文档管理</router-link>
+        </nav>
+    </header>
     <main class="app-main">
-      <ChatInterface />
+      <router-view /> 
     </main>
     <footer class="app-footer">
       <p>&copy; {{ new Date().getFullYear() }} GadgetGuide AI. (Demonstration Purposes)</p>
-      </footer>
+    </footer>
   </div>
 </template>
 
 <script setup>
-// 导入我们的聊天界面组件
-import ChatInterface from './components/ChatInterface.vue';
-
-// 这里不需要额外的 JavaScript 逻辑，因为主要功能都在 ChatInterface 组件中
-// 如果将来有全局应用级别的逻辑，可以写在这里
+// 当使用 Vue Router 时，App.vue 通常不需要再直接导入 ChatInterface 或 DocumentUploader。
+// Vue Router 会根据当前的 URL 路径，自动将匹配到的组件渲染到 <router-view /> 的位置。
+// 如果有全局的、与路由无关的逻辑，可以放在这里。
 </script>
 
 <style>
-/* App.vue 的样式通常是全局的，或者只针对 #app 及其直接子元素的基础布局。
-  我们在这里使用之前在 theme.css 中定义的 CSS 变量。
-  确保 theme.css 已经在 main.js 中被正确导入。
-*/
+/* App.vue 的样式 (全局或基础布局) */
+/* 使用您在 theme.css 中定义的 CSS 变量 */
+/* 确保 theme.css 已经在 main.js 中被正确导入 */
 
-/* body, html 的基础样式已在 theme.css 中设置 (font-family, background-color) */
+/* body, html 的基础样式已在 theme.css 中设置 (font-family, background-color 等) */
 
 #app {
   -webkit-font-smoothing: antialiased;
@@ -44,31 +45,71 @@ import ChatInterface from './components/ChatInterface.vue';
   text-align: center;
   box-shadow: 0 2px 5px rgba(0,0,0,0.15); /* 稍微调整阴影 */
   border-bottom: 3px solid var(--color-primary-light-blue); /* 添加一个亮蓝色下边框增加层次感 */
+  position: sticky; /* 让页眉在滚动时固定在顶部，可选 */
+  top: 0;
+  z-index: 1000; /* 确保页眉在最上层 */
 }
 
 .app-header h1 {
   margin: 0;
   font-size: 1.9em; /* 稍微增大标题 */
   font-weight: 600; /* 标题字重调整 */
+  margin-bottom: calc(var(--spacing-unit, 8px) * 0.5); /* 为导航留出一点空间 */
+}
+
+/* 新增导航链接样式 */
+.app-nav {
+  margin-top: calc(var(--spacing-unit, 8px));
+}
+
+.app-nav a {
+  font-weight: 500;
+  color: var(--color-text-light);
+  margin: 0 calc(var(--spacing-unit, 8px) * 1.5);
+  text-decoration: none;
+  padding: calc(var(--spacing-unit, 8px) * 0.75) var(--spacing-unit, 8px); /* 调整padding */
+  border-radius: var(--border-radius-small, 4px);
+  transition: background-color var(--transition-short, 0.2s ease-in-out), color var(--transition-short, 0.2s ease-in-out);
+}
+
+.app-nav a:hover {
+  background-color: color-mix(in srgb, var(--color-primary-light-blue, #5db3d5) 25%, transparent); /* 悬停背景更柔和 */
+}
+
+.app-nav a.router-link-exact-active { /* 当前激活路由的链接样式 */
+  color: var(--color-accent-yellow, #f1c40e);
+  /* background-color: var(--color-primary-light-blue); */ /* 可以给激活链接一个更明显的背景 */
+  font-weight: 700; /* 激活链接文字加粗 */
+  pointer-events: none;
 }
 
 .app-main {
-  flex-grow: 1; /* 让主内容区域占据剩余空间 */
-  padding: calc(var(--spacing-unit, 8px) * 2.5); /* 使用间距变量调整内边距 */
+  flex-grow: 1;
+  padding: calc(var(--spacing-unit, 8px) * 2.5);
   display: flex;
   justify-content: center;
-  align-items: flex-start; /* 或者 center, 确保聊天容器的对齐方式 */
+  align-items: flex-start; 
   /* background-color: var(--color-background-page); /* 主内容区域背景已由body继承 */
 }
 
 .app-footer {
-  background-color: var(--color-primary-medium-blue); /* 页脚使用中蓝色 */
-  color: var(--color-accent-green); /* 页脚文字使用浅绿色，与深蓝背景形成对比 */
-  /* 或者 color: color-mix(in srgb, var(--color-text-light) 80%, transparent); 更柔和的浅色 */
+  background-color: var(--color-primary-medium-blue);
+  color: var(--color-accent-green);
   text-align: center;
   padding: calc(var(--spacing-unit, 8px) * 1.5);
   font-size: 0.85em;
-  margin-top: auto; /* 将页脚推到底部，即使内容不足 */
-  border-top: 1px solid var(--color-primary-light-blue); /* 页脚上边框 */
+  margin-top: auto;
+  border-top: 1px solid var(--color-primary-light-blue);
+}
+
+/* 页面切换过渡效果 (可选) */
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity 0.2s ease; /* 过渡时间可以短一些 */
+}
+
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
 }
 </style>
