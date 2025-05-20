@@ -1,47 +1,63 @@
-import { createRouter, createWebHistory } from 'vue-router';
-import ChatInterface from '../components/ChatInterface.vue'; // 您的聊天组件
-import DocumentUploader from '../components/DocumentUploader.vue'; // 您的文档上传组件
+// src/router/index.js
+
+import { createRouter, createWebHistory } from 'vue-router'
+import ChatInterface from '../components/ChatInterface.vue'
+import DocumentUploader from '../components/DocumentUploader.vue'
+import UserLogin from '../components/UserLogin.vue'
+import UserRegister from '../components/UserRegister.vue' // ✅ 新增注册页
+import { getToken } from '@/utils/token'
 
 const routes = [
   {
-    path: '/', // 根路径
-    redirect: '/chat' // 当用户访问根路径时，自动重定向到聊天界面
+    path: '/',
+    redirect: '/login'
+  },
+  {
+    path: '/login',
+    name: 'UserLogin',
+    component: UserLogin,
+    meta: { title: 'GadgetGuide AI - 登录', public: true }
+  },
+  {
+    path: '/register',
+    name: 'UserRegister',
+    component: UserRegister,
+    meta: { title: 'GadgetGuide AI - 注册', public: true }
   },
   {
     path: '/chat',
-    name: 'Chat',
+    name: 'ChatInterface',
     component: ChatInterface,
-    meta: { title: 'GadgetGuide AI - 聊天' } // 可选：页面标题
+    meta: { title: 'GadgetGuide AI - 聊天', requiresAuth: true }
   },
   {
     path: '/upload',
     name: 'UploadDocuments',
     component: DocumentUploader,
-    meta: { title: 'GadgetGuide AI - 上传文档' } // 可选：页面标题
+    meta: { title: 'GadgetGuide AI - 上传文档', requiresAuth: true }
   },
-  // --- 未来可以添加更多路由 ---
-  // {
-  //   path: '/login',
-  //   name: 'Login',
-  //   component: () => import('../views/LoginPage.vue') // 示例：异步加载组件
-  // },
-  // {
-  //   path: '/history',
-  //   name: 'ChatHistory',
-  //   component: () => import('../views/ChatHistoryPage.vue'),
-  //   meta: { requiresAuth: true } // 示例：路由元信息，用于导航守卫
-  // }
-];
+  // ...其他页面
+]
 
 const router = createRouter({
-  history: createWebHistory(process.env.BASE_URL || '/'), // 使用 HTML5 History 模式
+  history: createWebHistory(process.env.BASE_URL || '/'),
   routes
-});
+})
 
-// 可选：全局前置导航守卫，例如用于设置页面标题
+// 全局前置导航守卫
 router.beforeEach((to, from, next) => {
-  document.title = to.meta.title || 'GadgetGuide AI';
-  next();
-});
+  document.title = to.meta.title || 'GadgetGuide AI'
 
-export default router;
+  const token = getToken()
+  // 访问需要登录的页面且没登录
+  if (to.meta.requiresAuth && !token) {
+    return next('/login')
+  }
+  // 已登录时禁止访问登录/注册页，自动跳到 /chat
+  if ((to.path === '/login' || to.path === '/register') && token) {
+    return next('/chat')
+  }
+  next()
+})
+
+export default router
