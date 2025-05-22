@@ -1,10 +1,10 @@
 // src/router/index.js
 
 import { createRouter, createWebHistory } from 'vue-router'
-import ChatInterface from '../components/ChatInterface.vue'
+import MainPage from '../views/MainPage.vue'                   // 多会话主页面
 import DocumentUploader from '../components/DocumentUploader.vue'
 import UserLogin from '../components/UserLogin.vue'
-import UserRegister from '../components/UserRegister.vue' // ✅ 新增注册页
+import UserRegister from '../components/UserRegister.vue'
 import { getToken } from '@/utils/token'
 
 const routes = [
@@ -26,8 +26,8 @@ const routes = [
   },
   {
     path: '/chat',
-    name: 'ChatInterface',
-    component: ChatInterface,
+    name: 'MainPage',
+    component: MainPage,   // ⭐️ 这里改为多会话主页面 MainPage.vue（原来是 ChatInterface.vue）
     meta: { title: 'GadgetGuide AI - 聊天', requiresAuth: true }
   },
   {
