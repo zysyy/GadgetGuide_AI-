@@ -5,7 +5,7 @@ from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.orm import Session
 from jose import JWTError, jwt
 from .schemas import UserCreate, UserLogin, UserOut
-from .crud import get_user_by_username, create_user, authenticate_user
+from .crud import get_user_by_username, get_user_by_email, create_user, authenticate_user
 from .auth_utils import create_access_token
 from ..database import SessionLocal
 from ..config import SECRET_KEY, ALGORITHM
@@ -48,19 +48,25 @@ def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(
 # --- 注册接口：接收 JSON ---
 @router.post("/register", response_model=UserOut)
 def register(user: UserCreate, db: Session = Depends(get_db)):
+    # 检查用户名和邮箱唯一性
     if get_user_by_username(db, user.username):
         logger.info(f"Username already exists: {user.username}")
         raise HTTPException(status_code=400, detail="Username already exists.")
-    new_user = create_user(db, user.username, user.password)
-    logger.info(f"New user registered: {new_user.username}")
+    if get_user_by_email(db, user.email):
+        logger.info(f"Email already exists: {user.email}")
+        raise HTTPException(status_code=400, detail="Email already exists.")
+    new_user = create_user(db, user.username, user.email, user.password)
+    logger.info(f"New user registered: {new_user.username} ({new_user.email})")
     return new_user
 
 # --- 登录接口：接收 JSON ---
 @router.post("/login")
 def login(user: UserLogin, db: Session = Depends(get_db)):
-    db_user = authenticate_user(db, user.username, user.password)
+    # 登录可用用户名或邮箱（任选一个字段填写）
+    username_or_email = user.username if user.username else user.email
+    db_user = authenticate_user(db, username_or_email, user.password)
     if not db_user:
-        logger.warning(f"Login failed for username: {user.username}")
+        logger.warning(f"Login failed for: {username_or_email}")
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid credentials.")
     token = create_access_token({"sub": db_user.username})
     logger.info(f"User logged in: {db_user.username}")
