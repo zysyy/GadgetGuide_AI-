@@ -1,4 +1,3 @@
-<!-- src/components/Sidebar.vue -->
 <template>
   <aside class="sidebar">
     <div class="sidebar-header">
@@ -14,12 +13,12 @@
     <ul class="conversation-list">
       <li
         v-for="(conv, i) in conversations"
-        :key="i"
+        :key="conv.id || i"
         :class="{ active: i === currentIndex }"
         @click="select(i)"
         @mouseenter="hoverIndex = i"
         @mouseleave="hoverIndex = null"
-        @dblclick.stop="startEdit(i, conv)"
+        @dblclick.stop="startEdit(i, conv.title)"
       >
         <!-- 编辑态 -->
         <template v-if="editIndex === i">
@@ -35,8 +34,8 @@
         </template>
         <!-- 展示态 -->
         <template v-else>
-          <span>{{ conv }}</span>
-          <span class="edit-btn" @click.stop="startEdit(i, conv)" title="重命名">
+          <span>{{ conv.title }}</span>
+          <span class="edit-btn" @click.stop="startEdit(i, conv.title)" title="重命名">
             <svg width="14" height="14" viewBox="0 0 20 20" fill="none">
               <path d="M3 17h14M13.5 3.5a2 2 0 0 1 2.8 2.8l-8.2 8.2L5 15l0.5-3.1 8-8z" stroke="#3573fa" stroke-width="1.5"/>
             </svg>
@@ -56,8 +55,17 @@
 
 <script setup lang="ts">
 import { ref, nextTick } from 'vue'
+
+// === 重点：类型是会话对象数组 ===
+interface Conversation {
+  id: number
+  title: string
+  created_at?: string
+  messages?: any[]
+}
+
 const props = defineProps<{
-  conversations: string[]
+  conversations: Conversation[]
   currentIndex: number
 }>()
 const emits = defineEmits<{

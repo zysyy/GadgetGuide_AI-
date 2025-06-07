@@ -24,7 +24,9 @@
             />
           </div>
           <div class="form-action">
-            <button type="submit">登录</button>
+            <button type="submit" :disabled="loading">
+              {{ loading ? '登录中...' : '登录' }}
+            </button>
           </div>
           <div class="form-bottom">
             <router-link to="/register" class="register-link">没有账号？注册</router-link>
@@ -37,13 +39,46 @@
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
 import NavBar from '@/components/NavBar.vue'
 
 const username = ref('')
 const password = ref('')
 const isDark = ref(false)
+const loading = ref(false)
+const router = useRouter()
 
-function handleLogin() {}
+async function handleLogin() {
+  if (!username.value || !password.value) return
+  loading.value = true
+  try {
+    const res = await fetch('http://localhost:8000/auth/login', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        username: username.value,
+        password: password.value
+      })
+    })
+    if (!res.ok) {
+      const err = await res.json()
+      alert(err.detail || '登录失败')
+      loading.value = false
+      return
+    }
+    const data = await res.json()
+    // 保存 token
+    localStorage.setItem('token', data.access_token)
+    // 跳转到聊天主页面
+    router.push('/chat')
+  } catch (e) {
+    alert('网络错误，请检查后端服务是否启动')
+  } finally {
+    loading.value = false
+  }
+}
 
 function toggleTheme() {
   isDark.value = !isDark.value
@@ -136,7 +171,11 @@ form {
   transition: background 0.18s;
   box-sizing: border-box;
 }
-.form-action button:hover {
+.form-action button:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+.form-action button:hover:enabled {
   background: #2057c8;
 }
 .form-bottom {

@@ -42,8 +42,12 @@
               required
             />
           </div>
+          <div v-if="errorMsg" class="error-tip">{{ errorMsg }}</div>
+          <div v-if="successMsg" class="success-tip">{{ successMsg }}</div>
           <div class="form-action">
-            <button type="submit">注册</button>
+            <button type="submit" :disabled="isSubmitting">
+              {{ isSubmitting ? "注册中..." : "注册" }}
+            </button>
           </div>
           <div class="form-bottom">
             <router-link to="/login" class="login-link">已有账号？去登录</router-link>
@@ -56,21 +60,55 @@
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
 import NavBar from '@/components/NavBar.vue'
 
 const username = ref('')
 const email = ref('')
 const password = ref('')
 const confirmPassword = ref('')
+const isSubmitting = ref(false)
+const errorMsg = ref('')
+const successMsg = ref('')
 const isDark = ref(false)
+const router = useRouter()
 
-function handleRegister() {
-  // TODO: 校验逻辑 & API 提交
-  if (password.value !== confirmPassword.value) {
-    alert('两次输入的密码不一致')
+async function handleRegister() {
+  errorMsg.value = ''
+  successMsg.value = ''
+  if (!username.value || !email.value || !password.value || !confirmPassword.value) {
+    errorMsg.value = '请填写完整信息'
     return
   }
-  // ...实际注册逻辑
+  if (password.value !== confirmPassword.value) {
+    errorMsg.value = '两次输入的密码不一致'
+    return
+  }
+
+  isSubmitting.value = true
+  try {
+    const res = await fetch('http://localhost:8000/auth/register', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        username: username.value,
+        email: email.value,
+        password: password.value,
+      })
+    })
+    if (!res.ok) {
+      const data = await res.json()
+      errorMsg.value = data.detail || '注册失败'
+    } else {
+      successMsg.value = '注册成功，正在跳转登录页...'
+      setTimeout(() => {
+        router.push('/login')
+      }, 1200)
+    }
+  } catch (e: any) {
+    errorMsg.value = '网络异常，请重试'
+  }
+  isSubmitting.value = false
 }
 
 function toggleTheme() {
@@ -164,6 +202,10 @@ form {
   transition: background 0.18s;
   box-sizing: border-box;
 }
+.form-action button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
 .form-action button:hover {
   background: #2057c8;
 }
@@ -180,5 +222,25 @@ form {
 }
 .login-link:hover {
   color: #235bdf;
+}
+.error-tip {
+  width: 100%;
+  color: #ff5454;
+  background: #fff1f1;
+  border-radius: 6px;
+  padding: 8px 10px;
+  margin-bottom: 6px;
+  font-size: 0.98em;
+  text-align: center;
+}
+.success-tip {
+  width: 100%;
+  color: #11bb80;
+  background: #e7fff4;
+  border-radius: 6px;
+  padding: 8px 10px;
+  margin-bottom: 6px;
+  font-size: 0.98em;
+  text-align: center;
 }
 </style>

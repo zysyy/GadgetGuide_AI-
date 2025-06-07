@@ -16,7 +16,7 @@
       <!-- 主聊天区 -->
       <main class="chat-main">
         <div class="chat-toolbar">
-          <button class="clear-btn" @click="clearCurrentConversation">
+          <button class="clear-btn" @click="clearCurrentConversation" :disabled="!currentConversation">
             清空消息
           </button>
         </div>
@@ -24,10 +24,10 @@
           <div
             v-for="(msg, i) in messages"
             :key="i"
-            :class="['bubble', msg.role]"
+            :class="['bubble', msg.role === 'user' ? 'user' : 'bot']"
           >
             <div
-              v-if="msg.role === 'bot'"
+              v-if="msg.role === 'assistant' || msg.role === 'bot'"
               class="markdown"
               v-html="renderMarkdown(msg.content)"
             ></div>
@@ -35,10 +35,7 @@
               {{ msg.content }}
             </template>
           </div>
-          <div
-            v-if="isThinking"
-            class="bubble bot thinking"
-          >
+          <div v-if="isThinking" class="bubble bot thinking">
             <span class="dot"></span>
             <span class="dot"></span>
             <span class="dot"></span>
@@ -49,10 +46,10 @@
           <input
             v-model="input"
             placeholder="请输入内容..."
-            :disabled="isThinking"
+            :disabled="isThinking || !currentConversation"
             @keyup.enter="send"
           />
-          <button @click="send" :disabled="isThinking">发送</button>
+          <button @click="send" :disabled="isThinking || !currentConversation">发送</button>
         </footer>
       </main>
     </div>
@@ -60,44 +57,42 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, nextTick, onMounted } from 'vue'
+import { ref, computed, nextTick, onMounted, watch } from 'vue'
 import NavBar from '@/components/NavBar.vue'
 import Sidebar from '@/components/Sidebar.vue'
 import { marked } from 'marked'
 import DOMPurify from 'dompurify'
+import { useRouter } from 'vue-router'
 
-type Message = {
-  role: 'user' | 'bot'
+const API_BASE = "http://localhost:8000"
+
+// --- 类型定义 ---
+interface Conversation {
+  id: number
+  title: string
+}
+interface Message {
+  id: number
+  role: 'user' | 'assistant' | 'bot'
   content: string
+  created_at?: string
 }
 
-const conversations = ref<string[]>([
-  '未命名会话 1',
-  '未命名会话 2',
-  '未命名会话 3'
-])
-const allMessages = ref<Message[][]>([
-  [
-    { role: 'bot', content: '你好，有什么可以帮您？\n\n**支持Markdown格式！**\n\n- 试试：`代码`、列表、链接\n- [GadgetGuide AI](#)' },
-    { role: 'user', content: '请问iPhone 15怎么样？' }
-  ],
-  [
-    { role: 'bot', content: '欢迎来到会话2' }
-  ],
-  [
-    { role: 'bot', content: '这是会话3' }
-  ]
-])
+const router = useRouter()
+const isDark = ref(false)
+const conversations = ref<Conversation[]>([])
 const currentIndex = ref(0)
-const messages = computed(() => allMessages.value[currentIndex.value] || [])
+const messages = ref<Message[]>([])
 const input = ref('')
-
 const chatContentEl = ref<HTMLElement | null>(null)
 const isThinking = ref(false)
+const token = localStorage.getItem("token") // 注意这里和你的login.vue/token名字统一！
+
+const currentConversation = computed(() =>
+  conversations.value.length > 0 ? conversations.value[currentIndex.value] : null
+)
 
 // ===== 主题切换 =====
-const isDark = ref(false)
-
 function toggleTheme() {
   isDark.value = !isDark.value
   document.documentElement.classList.toggle('dark', isDark.value)
@@ -109,7 +104,135 @@ onMounted(() => {
     isDark.value = true
     document.documentElement.classList.add('dark')
   }
+  if (!token) {
+    router.push("/login")
+    return
+  }
+  fetchConversations()
 })
+
+// ===== 联动 API =====
+// 1. 加载所有会话
+async function fetchConversations() {
+  const res = await fetch(`${API_BASE}/chat/conversations/`, {
+    headers: { Authorization: `Bearer ${token}` }
+  })
+  if (res.status === 401) {
+    router.push("/login"); return
+  }
+  conversations.value = await res.json()
+  if (conversations.value.length > 0) {
+    currentIndex.value = 0
+    fetchMessages(conversations.value[0].id)
+  } else {
+    messages.value = []
+  }
+}
+
+// 2. 加载会话消息
+async function fetchMessages(conversationId: number) {
+  messages.value = []
+  isThinking.value = false
+  const res = await fetch(`${API_BASE}/chat/conversations/${conversationId}/messages/`, {
+    headers: { Authorization: `Bearer ${token}` }
+  })
+  if (res.status === 401) { router.push("/login"); return }
+  messages.value = await res.json()
+  scrollToBottom()
+}
+
+// 3. 切换会话
+watch(currentIndex, () => {
+  const conv = conversations.value[currentIndex.value]
+  if (conv) fetchMessages(conv.id)
+})
+
+// 4. 新建会话
+async function addConversation() {
+  const res = await fetch(`${API_BASE}/chat/conversations/`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`
+    },
+    body: JSON.stringify({ title: `未命名会话 ${conversations.value.length + 1}` })
+  })
+  if (res.status === 401) { router.push("/login"); return }
+  const conv = await res.json()
+  conversations.value.unshift(conv)
+  currentIndex.value = 0
+  await fetchMessages(conv.id)
+}
+
+// 5. 删除会话（后端未实现物理删除接口，这里前端本地删）
+async function deleteConversation(idx: number) {
+  if (conversations.value.length <= 1) return
+  conversations.value.splice(idx, 1)
+  if (currentIndex.value >= conversations.value.length) currentIndex.value = conversations.value.length - 1
+  const conv = conversations.value[currentIndex.value]
+  if (conv) fetchMessages(conv.id)
+  else messages.value = []
+}
+
+// 6. 重命名会话（可选：需后端 PATCH 支持，这里仅本地同步）
+function renameConversation(idx: number, name: string) {
+  if (!name.trim()) return
+  conversations.value[idx].title = name.trim()
+}
+
+// 7. 发送消息并AI回复
+async function send() {
+  const text = input.value.trim()
+  if (!text || !currentConversation.value) return
+  isThinking.value = true
+
+  // 1. 发送用户消息
+  await fetch(`${API_BASE}/chat/conversations/${currentConversation.value.id}/messages/`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`
+    },
+    body: JSON.stringify({ role: "user", content: text })
+  })
+
+  // 2. 让AI回复（你可以根据业务自己决定用哪个API，比如直接调用 /ask，然后保存进消息表）
+  // 这里仅模拟等待2秒/可改为真实API
+  await new Promise(r => setTimeout(r, 500))
+  // 或者调用 /ask 并入库
+  // const askRes = await fetch(`${API_BASE}/ask`, {
+  //   method: "POST",
+  //   headers: {
+  //     "Content-Type": "application/x-www-form-urlencoded",
+  //     Authorization: `Bearer ${token}`
+  //   },
+  //   body: new URLSearchParams({ query: text })
+  // })
+  // const askJson = await askRes.json()
+  // await fetch(`${API_BASE}/chat/conversations/${currentConversation.value.id}/messages/`, {
+  //   method: "POST",
+  //   headers: {
+  //     "Content-Type": "application/json",
+  //     Authorization: `Bearer ${token}`
+  //   },
+  //   body: JSON.stringify({ role: "bot", content: askJson.answer })
+  // })
+
+  await fetchMessages(currentConversation.value.id)
+  isThinking.value = false
+  input.value = ""
+}
+
+function clearCurrentConversation() {
+  // 这里只是本地清空，不会删除后端消息（你可以拓展后端清空接口）
+  messages.value = []
+}
+
+// --- Markdown 渲染 ---
+function renderMarkdown(text: string) {
+  const raw = marked.parse(text ?? '', { breaks: true, gfm: true })
+  return DOMPurify.sanitize(raw, { USE_PROFILES: { html: true } })
+}
 
 function scrollToBottom() {
   nextTick(() => {
@@ -118,70 +241,10 @@ function scrollToBottom() {
     }
   })
 }
-
-function renderMarkdown(text: string) {
-  const raw = marked.parse(text ?? '', { breaks: true, gfm: true })
-  return DOMPurify.sanitize(raw, { USE_PROFILES: { html: true } })
-}
-
-function send() {
-  const text = input.value.trim()
-  if (!text || isThinking.value) return
-  allMessages.value[currentIndex.value].push({ role: 'user', content: text })
-  input.value = ''
-  scrollToBottom()
-  isThinking.value = true
-
-  setTimeout(() => {
-    allMessages.value[currentIndex.value].push({
-      role: 'bot',
-      content: `AI：收到，你说「${text}」\n\n*（支持 Markdown 语法）*`
-    })
-    isThinking.value = false
-    scrollToBottom()
-  }, 2000)
-}
-
-function addConversation() {
-  const newName = `未命名会话 ${conversations.value.length + 1}`
-  conversations.value.push(newName)
-  allMessages.value.push([
-    { role: 'bot', content: '您好，新会话已创建，可以开始提问！' }
-  ])
-  currentIndex.value = conversations.value.length - 1
-  nextTick(scrollToBottom)
-}
-
-function deleteConversation(i: number) {
-  if (conversations.value.length <= 1) {
-    return
-  }
-  conversations.value.splice(i, 1)
-  allMessages.value.splice(i, 1)
-  if (currentIndex.value === i) {
-    currentIndex.value = Math.max(0, i - 1)
-  } else if (currentIndex.value > i) {
-    currentIndex.value--
-  }
-  nextTick(scrollToBottom)
-}
-
-function renameConversation(i: number, name: string) {
-  if (name.trim()) {
-    conversations.value[i] = name.trim()
-  }
-}
-
-function clearCurrentConversation() {
-  const i = currentIndex.value
-  allMessages.value[i] = [
-    { role: 'bot', content: '您好，消息已清空，可以重新开始！' }
-  ]
-  nextTick(scrollToBottom)
-}
 </script>
 
 <style>
+/* ... 你的样式完全保留 ... */
 .chat-page {
   display: flex;
   flex-direction: column;
@@ -189,13 +252,11 @@ function clearCurrentConversation() {
   background: var(--color-bg);
   color: var(--color-main);
 }
-
 .chat-body {
   display: flex;
   flex: 1;
   height: calc(100vh - 56px); /* NavBar高度 */
 }
-
 .sidebar {
   width: 240px;
   min-width: 200px;
@@ -205,7 +266,6 @@ function clearCurrentConversation() {
   box-sizing: border-box;
   height: 100%;
 }
-
 .chat-main {
   flex: 1;
   min-width: 0;
@@ -214,7 +274,6 @@ function clearCurrentConversation() {
   align-items: center;
   background: var(--color-bg);
 }
-
 .chat-toolbar {
   width: 100%;
   max-width: 700px;
@@ -224,7 +283,6 @@ function clearCurrentConversation() {
   gap: 10px;
   padding: 12px 0 0 0;
 }
-
 .clear-btn {
   font-size: 13px;
   background: var(--color-bot);
@@ -239,7 +297,6 @@ function clearCurrentConversation() {
   background: var(--color-bot);
   filter: brightness(0.93);
 }
-
 .chat-content {
   flex: 1;
   width: 100%;
@@ -251,7 +308,6 @@ function clearCurrentConversation() {
   display: flex;
   flex-direction: column;
 }
-
 .bubble {
   max-width: 70%;
   min-width: 80px;
@@ -272,7 +328,6 @@ function clearCurrentConversation() {
   color: var(--color-user-text);
   align-self: flex-end;
 }
-
 .markdown :deep(p),
 .markdown :deep(ul),
 .markdown :deep(ol) {
@@ -301,7 +356,6 @@ function clearCurrentConversation() {
   color: var(--color-link);
   text-decoration: underline;
 }
-
 .thinking {
   opacity: 0.8;
 }

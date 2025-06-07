@@ -48,7 +48,12 @@ app = FastAPI(title="GadgetGuide AI API")
 Base.metadata.create_all(bind=engine)
 
 # --- CORS 配置 ---
-origins = ["http://localhost:8080", "http://localhost:8081"]
+origins = [
+    "http://localhost:8080",
+    "http://localhost:8081",
+    "http://localhost:5173",    # <--- 加上这个！
+    "http://127.0.0.1:5173",    # 建议也加，防止浏览器用127域名
+]
 app.add_middleware(
     CORSMiddleware,
     allow_origins=origins,
