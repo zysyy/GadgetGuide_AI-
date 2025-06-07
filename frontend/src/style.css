@@ -1,39 +1,68 @@
 :root {
+  /* 浅色主题主色板 */
+  --color-bg: #f5f7fa;
+  --color-sidebar: #f7f9fc;
+  --color-border: #e0e0e0;
+  --color-bot: #e6eefc;
+  --color-user: #3573fa;
+  --color-user-text: #fff;
+  --color-main: #222;
+  --color-link: #3573fa;
+  --color-link-hover: #535bf2;
+  --color-btn-bg: #1a1a1a;
+  --color-btn-text: #fff;
+  --color-btn-bg-hover: #f9f9f9;
+  --color-btn-text-hover: #213547;
+  --color-markdown-code-bg: #f4f4f4;
+  --color-markdown-code: #222;
+  --color-markdown-pre-bg: #2b303b;
+  --color-markdown-pre: #eaeaea;
+}
+
+.dark, .dark body {
+  --color-bg: #181a20;
+  --color-sidebar: #23262f;
+  --color-border: #35384a;
+  --color-bot: #25334e;
+  --color-user: #3573fa;
+  --color-user-text: #fff;
+  --color-main: #e0e3ed;
+  --color-link: #70a1ff;
+  --color-link-hover: #a6c8ff;
+  --color-btn-bg: #23262f;
+  --color-btn-text: #e0e3ed;
+  --color-btn-bg-hover: #232f4e;
+  --color-btn-text-hover: #fff;
+  --color-markdown-code-bg: #232730;
+  --color-markdown-code: #ececec;
+  --color-markdown-pre-bg: #232730;
+  --color-markdown-pre: #ececec;
+}
+
+/* 全局基础样式 */
+html, body {
+  background: var(--color-bg);
+  color: var(--color-main);
   font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
   line-height: 1.5;
   font-weight: 400;
-
-  color-scheme: light dark;
-  color: rgba(255, 255, 255, 0.87);
-  background-color: #242424;
-
+  margin: 0;
+  min-width: 320px;
+  min-height: 100vh;
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  transition: background 0.3s, color 0.3s;
 }
 
 a {
   font-weight: 500;
-  color: #646cff;
+  color: var(--color-link);
   text-decoration: inherit;
+  transition: color 0.2s;
 }
-a:hover {
-  color: #535bf2;
-}
-
-body {
-  margin: 0;
-  display: flex;
-  place-items: center;
-  min-width: 320px;
-  min-height: 100vh;
-}
-
-h1 {
-  font-size: 3.2em;
-  line-height: 1.1;
-}
+a:hover { color: var(--color-link-hover); }
 
 button {
   border-radius: 8px;
@@ -42,38 +71,23 @@ button {
   font-size: 1em;
   font-weight: 500;
   font-family: inherit;
-  background-color: #1a1a1a;
+  background-color: var(--color-btn-bg);
+  color: var(--color-btn-text);
   cursor: pointer;
-  transition: border-color 0.25s;
+  transition: border-color 0.25s, background 0.2s, color 0.2s;
 }
 button:hover {
-  border-color: #646cff;
+  border-color: var(--color-link);
+  background-color: var(--color-btn-bg-hover);
+  color: var(--color-btn-text-hover);
 }
-button:focus,
-button:focus-visible {
+button:focus, button:focus-visible {
   outline: 4px auto -webkit-focus-ring-color;
 }
 
-.card {
-  padding: 2em;
-}
+/* 滚动条 */
+::-webkit-scrollbar { width: 8px; background: var(--color-sidebar); }
+::-webkit-scrollbar-thumb { background: var(--color-border); border-radius: 5px; }
 
-#app {
-  max-width: 1280px;
-  margin: 0 auto;
-  padding: 2rem;
-  text-align: center;
-}
-
-@media (prefers-color-scheme: light) {
-  :root {
-    color: #213547;
-    background-color: #ffffff;
-  }
-  a:hover {
-    color: #747bff;
-  }
-  button {
-    background-color: #f9f9f9;
-  }
-}
+/* 过渡丝滑 */
+* { transition: background 0.3s, color 0.3s, border-color 0.2s; }
