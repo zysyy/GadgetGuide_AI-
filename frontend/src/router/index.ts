@@ -1,24 +1,52 @@
-import { createRouter, createWebHistory } from "vue-router"
+// src/router/index.ts
+import { createRouter, createWebHistory } from 'vue-router'
 
 const routes = [
   {
-    path: "/",
-    redirect: "/login"  // 主页自动跳转到登录页，防止空白
+    path: '/',
+    redirect: '/login'
   },
   {
-    path: "/login",
-    name: "Login",
-    component: () => import("@/views/Login.vue"),
+    path: '/login',
+    name: 'Login',
+    component: () => import('@/views/Login.vue'),
   },
   {
-    path: "/register",
-    name: "Register",
-    component: () => import("@/views/Register.vue"),  // 注册页
+    path: '/register',
+    name: 'Register',
+    component: () => import('@/views/Register.vue'),
   },
   {
-    path: "/chat",
-    name: "Chat",
-    component: () => import("@/views/ChatPage.vue"),
+    path: '/chat',
+    name: 'Chat',
+    component: () => import('@/views/ChatPage.vue'),
+  },
+  // 管理后台嵌套路由
+  {
+    path: '/admin',
+    component: () => import('@/views/AdminDashboard.vue'),
+    children: [
+      {
+        path: '',
+        name: 'AdminHome',
+        component: () => import('@/views/admin/AdminHome.vue'),
+      },
+      {
+        path: 'users',
+        name: 'UserManage',
+        component: () => import('@/views/admin/UserManage.vue'),
+      },
+      {
+        path: 'kb',
+        name: 'KnowledgeManage',
+        component: () => import('@/views/admin/KnowledgeManage.vue'),
+      },
+      {
+        path: 'stats',
+        name: 'HotStats',
+        component: () => import('@/views/admin/HotStats.vue'),
+      },
+    ]
   }
 ]
 

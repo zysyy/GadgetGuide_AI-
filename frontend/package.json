@@ -10,10 +10,12 @@
   },
   "dependencies": {
     "dompurify": "^3.2.6",
+    "element-plus": "^2.10.1",
     "marked": "^4.3.0",
     "pinia": "^3.0.3",
     "vue": "^3.5.16",
-    "vue-router": "^4.5.1"
+    "vue-router": "^4.5.1",
+    "wordcloud": "^1.2.3"
   },
   "devDependencies": {
     "@types/marked": "^5.0.2",

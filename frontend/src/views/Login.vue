@@ -41,12 +41,14 @@
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import NavBar from '@/components/NavBar.vue'
+import { useUserStore } from '@/stores/user'
 
 const username = ref('')
 const password = ref('')
 const isDark = ref(false)
 const loading = ref(false)
 const router = useRouter()
+const userStore = useUserStore()
 
 async function handleLogin() {
   if (!username.value || !password.value) return
@@ -71,6 +73,25 @@ async function handleLogin() {
     const data = await res.json()
     // 保存 token
     localStorage.setItem('token', data.access_token)
+
+    // 新增：保存用户信息到 pinia
+    if (data.user) {
+      userStore.setUser({
+        id: data.user.id,
+        username: data.user.username,
+        is_admin: data.user.is_admin,
+        token: data.access_token
+      })
+    } else {
+      // 兼容老接口或异常情况
+      userStore.setUser({
+        id: null,
+        username: username.value,
+        is_admin: false,
+        token: data.access_token
+      })
+    }
+
     // 跳转到聊天主页面
     router.push('/chat')
   } catch (e) {

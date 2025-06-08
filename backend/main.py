@@ -1,5 +1,3 @@
-# backend/main.py
-
 import logging
 import os
 from pathlib import Path
@@ -36,9 +34,10 @@ from backend.knowledge_base_processor import create_index_from_files
 from backend.qa_handler import retrieve_context, reload_vector_db, get_final_answer
 from backend.config import UPLOAD_FOLDER
 from backend.auth.routes import router as auth_router
-from backend.chat.routes import router as chat_router  # ✅ 新增
+from backend.chat.routes import router as chat_router
+from backend.admin.routes import router as admin_router        # <--- 新增
 from backend.auth import models
-from backend.chat import models as chat_models         # ✅ 确保注册 chat 表
+from backend.chat import models as chat_models
 from backend.database import Base, engine
 
 # --- 创建 FastAPI 实例 ---
@@ -51,8 +50,8 @@ Base.metadata.create_all(bind=engine)
 origins = [
     "http://localhost:8080",
     "http://localhost:8081",
-    "http://localhost:5173",    # <--- 加上这个！
-    "http://127.0.0.1:5173",    # 建议也加，防止浏览器用127域名
+    "http://localhost:5173",
+    "http://127.0.0.1:5173",
 ]
 app.add_middleware(
     CORSMiddleware,
@@ -63,9 +62,10 @@ app.add_middleware(
 )
 
 # --- 路由挂载 ---
-logger.debug("Mounting /auth and /chat routes...")
+logger.debug("Mounting /auth, /chat and /admin routes...")
 app.include_router(auth_router)
 app.include_router(chat_router)
+app.include_router(admin_router)     # <--- 新增
 logger.info("Routes mounted successfully.")
 
 @app.on_event("startup")

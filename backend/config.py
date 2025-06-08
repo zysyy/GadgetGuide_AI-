@@ -15,6 +15,7 @@ ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24  # 1 天
 
 # --- BASE_DIR 配置 ---
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+DATABASE_URL = f"sqlite:///{os.path.join(BASE_DIR, 'users.db')}"
 
 # --- DEBUG 日志输出 ---
 logger.debug(f"--- In config.py ---")

@@ -62,7 +62,10 @@ def register(user: UserCreate, db: Session = Depends(get_db)):
 # --- 登录接口：接收 JSON ---
 @router.post("/login")
 def login(user: UserLogin, db: Session = Depends(get_db)):
-    # 登录可用用户名或邮箱（任选一个字段填写）
+    """
+    登录：用户名/邮箱+密码
+    成功后直接返回 access_token + user 字段
+    """
     username_or_email = user.username if user.username else user.email
     db_user = authenticate_user(db, username_or_email, user.password)
     if not db_user:
@@ -70,10 +73,23 @@ def login(user: UserLogin, db: Session = Depends(get_db)):
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid credentials.")
     token = create_access_token({"sub": db_user.username})
     logger.info(f"User logged in: {db_user.username}")
-    return {"access_token": token, "token_type": "bearer"}
+    # ✅ 直接返回用户信息给前端
+    return {
+        "access_token": token,
+        "token_type": "bearer",
+        "user": {
+            "id": db_user.id,
+            "username": db_user.username,
+            "is_admin": db_user.is_admin
+        }
+    }
 
 # --- 获取当前用户信息 ---
 @router.get("/me", response_model=UserOut)
 def read_users_me(current_user: UserOut = Depends(get_current_user)):
+    """
+    通过已登录的 token 获取当前用户完整信息
+    依然建议保留，用于前端自动登录/刷新/恢复身份等场景
+    """
     logger.debug(f"/auth/me called by user: {current_user.username}")
     return current_user
