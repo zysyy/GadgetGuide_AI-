@@ -15,10 +15,19 @@ class MessageOut(BaseModel):
     created_at: datetime
 
     class Config:
-        from_attributes = True
+        from_attributes = True  # Pydantic v2: 替代 orm_mode
 
 class ConversationCreate(BaseModel):
     title: Optional[str] = None
+
+class ConversationRename(BaseModel):
+    """
+    新增：用于重命名会话的请求体模型
+    """
+    title: str
+
+    class Config:
+        from_attributes = True
 
 class ConversationOut(BaseModel):
     id: int

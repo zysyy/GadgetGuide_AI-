@@ -10,6 +10,7 @@
         </svg>
       </button>
     </div>
+
     <ul class="conversation-list">
       <li
         v-for="(conv, i) in conversations"
@@ -32,6 +33,7 @@
             maxlength="30"
           />
         </template>
+
         <!-- 展示态 -->
         <template v-else>
           <span>{{ conv.title }}</span>
@@ -56,7 +58,7 @@
 <script setup lang="ts">
 import { ref, nextTick } from 'vue'
 
-// === 重点：类型是会话对象数组 ===
+// ======== 会话类型声明 ========
 interface Conversation {
   id: number
   title: string
@@ -64,10 +66,12 @@ interface Conversation {
   messages?: any[]
 }
 
+// ======== 接收的 props 和 emits ========
 const props = defineProps<{
   conversations: Conversation[]
   currentIndex: number
 }>()
+
 const emits = defineEmits<{
   (event: 'update:currentIndex', value: number): void
   (event: 'new-conversation'): void
@@ -75,16 +79,20 @@ const emits = defineEmits<{
   (event: 'rename', i: number, name: string): void
 }>()
 
+// ======== 侧边栏交互状态 ========
 const hoverIndex = ref<number | null>(null)
 
+// ======== 会话切换 ========
 function select(i: number) {
   emits('update:currentIndex', i)
 }
+
+// ======== 删除会话 ========
 function deleteConv(i: number) {
   emits('delete-conversation', i)
 }
 
-// ----------- 重命名核心 -----------
+// ======== 编辑态：重命名会话 ========
 const editIndex = ref<number | null>(null)
 const editName = ref('')
 const editInput = ref<HTMLInputElement>()
@@ -94,12 +102,14 @@ function startEdit(i: number, name: string) {
   editName.value = name
   nextTick(() => editInput.value?.focus())
 }
+
 function finishEdit(i: number) {
   const name = editName.value.trim() || '未命名会话'
   emits('rename', i, name)
   editIndex.value = null
   editName.value = ''
 }
+
 function cancelEdit() {
   editIndex.value = null
   editName.value = ''
@@ -120,12 +130,12 @@ function cancelEdit() {
 
 .sidebar-header {
   display: flex;
-  align-items: center;         
+  align-items: center;
   justify-content: space-between;
   font-weight: bold;
   font-size: 17px;
-  height: 40px;                
-  padding: 0 18px 10px 24px;   
+  height: 40px;
+  padding: 0 18px 10px 24px;
   box-sizing: border-box;
   color: var(--color-main);
 }
