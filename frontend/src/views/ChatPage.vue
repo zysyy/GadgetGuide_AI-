@@ -3,6 +3,7 @@
   <div class="chat-page">
     <NavBar :isDark="isDark" @toggle-theme="toggleTheme" />
     <div class="chat-body">
+      <!-- 侧边栏 -->
       <Sidebar
         class="sidebar"
         :conversations="conversations"
@@ -10,25 +11,33 @@
         @new-conversation="addConversation"
         @delete-conversation="deleteConversation"
         @rename="renameConversation"
+        @update-conversations="updateConversations"
       />
+
+      <!-- 主聊天区 -->
       <main class="chat-main">
         <div class="chat-toolbar">
-          <button class="clear-btn" @click="clearCurrentConversation" :disabled="!currentConversation">清空消息</button>
+          <button class="clear-btn" @click="clearCurrentConversation" :disabled="!currentConversation">
+            清空消息
+          </button>
         </div>
         <section class="chat-content" ref="chatContentEl">
           <div
             v-for="(msg, i) in messages"
             :key="i"
-            :class="['bubble', msg.role === 'user' ? 'user' : 'bot']"
+            :class="['message-item', msg.role === 'user' ? 'user' : 'bot']"
           >
-            <div
-              v-if="msg.role === 'assistant' || msg.role === 'bot'"
-              class="markdown"
-              v-html="renderMarkdown(msg.content)"
-            ></div>
-            <template v-else>
-              {{ msg.content }}
-            </template>
+            <div class="avatar">{{ msg.role === 'user' ? userAvatar : 'AI' }}</div>
+            <div class="bubble">
+              <div
+                v-if="msg.role === 'assistant' || msg.role === 'bot'"
+                class="markdown"
+                v-html="renderMarkdown(msg.content)"
+              ></div>
+              <template v-else>
+                {{ msg.content }}
+              </template>
+            </div>
           </div>
         </section>
         <footer class="chat-input">
@@ -55,6 +64,7 @@ import { useRouter } from 'vue-router'
 
 const API_BASE = "http://localhost:8000"
 const token = localStorage.getItem("token")!
+const username = localStorage.getItem("username") || "用户"
 
 const router = useRouter()
 const isDark = ref(false)
@@ -78,6 +88,12 @@ interface Message {
 const currentConversation = computed(() =>
   conversations.value.length > 0 ? conversations.value[currentIndex.value] : null
 )
+
+// 用户头像取用户名字的第一个非空字符
+const userAvatar = computed(() => {
+  const clean = username.trim().replace(/\s/g, '')
+  return clean ? clean.charAt(0) : 'U'
+})
 
 function toggleTheme() {
   isDark.value = !isDark.value
@@ -111,6 +127,7 @@ async function fetchConversations() {
     messages.value = []
   }
 }
+
 async function fetchMessages(conversationId: number) {
   const res = await fetch(`${API_BASE}/chat/conversations/${conversationId}/messages/`, {
     headers: { Authorization: `Bearer ${token}` }
@@ -119,6 +136,7 @@ async function fetchMessages(conversationId: number) {
   messages.value = await res.json()
   scrollToBottom()
 }
+
 watch(currentIndex, () => {
   const conv = conversations.value[currentIndex.value]
   if (conv) fetchMessages(conv.id)
@@ -162,11 +180,14 @@ async function renameConversation(idx: number, newTitle: string) {
   await fetchConversations()
 }
 
+function updateConversations(newConvs: Conversation[]) {
+  conversations.value = newConvs
+}
+
 async function send() {
   const text = input.value.trim()
   if (!text || !currentConversation.value) return
 
-  // 立即显示用户消息气泡
   messages.value.push({
     id: Date.now(),
     role: 'user',
@@ -174,7 +195,6 @@ async function send() {
   })
   scrollToBottom()
 
-  // 显示AI过渡气泡
   const thinkingBubbleId = Date.now() + 1
   messages.value.push({
     id: thinkingBubbleId,
@@ -185,7 +205,6 @@ async function send() {
 
   input.value = ""
 
-  // 发送到后端
   await fetch(`${API_BASE}/chat/conversations/${currentConversation.value.id}/messages/`, {
     method: "POST",
     headers: {
@@ -195,7 +214,6 @@ async function send() {
     body: JSON.stringify({ role: "user", content: text })
   })
 
-  // 拉取最新消息，替换掉AI过渡气泡
   await fetchMessages(currentConversation.value.id)
 }
 
@@ -270,30 +288,51 @@ function scrollToBottom() {
   flex: 1;
   width: 100%;
   overflow-y: auto;
-  padding: 32px 16px;
+  padding: 16px;
   display: flex;
   flex-direction: column;
   box-sizing: border-box;
 }
 
-.bubble {
-  max-width: 85%;
-  word-break: break-word;
-  padding: 14px 18px;
-  margin: 6px 0;
-  border-radius: 16px;
+.message-item {
   display: flex;
-  font-size: 15px;
+  align-items: flex-start;
+  margin: 8px 0;
+}
+
+.message-item.user {
+  flex-direction: row-reverse;
+}
+
+.avatar {
+  flex: 0 0 32px;
+  width: 32px;
+  height: 32px;
+  background: var(--color-border);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
+  font-size: 14px;
+  margin: 0 8px;
+}
+
+.bubble {
+  max-width: 80%;
+  padding: 10px 14px;
+  border-radius: 16px;
+  word-break: break-word;
   line-height: 1.5;
 }
 
-.bot {
+.bot .bubble {
   background: var(--color-bot);
   color: var(--color-main);
   align-self: flex-start;
 }
 
-.user {
+.user .bubble {
   background: var(--color-user);
   color: var(--color-user-text);
   align-self: flex-end;
@@ -333,40 +372,5 @@ function scrollToBottom() {
 .chat-input button:disabled {
   opacity: 0.5;
   cursor: not-allowed;
-}
-
-/* ========== 微调侧边栏内按钮间距与删除按钮居中 ========== */
-.edit-btn {
-  margin-left: 4px; /* 缩小和删除按钮的间距 */
-  cursor: pointer;
-  display: inline-flex;
-  align-items: center;
-  opacity: 0.5;
-  transition: opacity 0.2s;
-}
-.edit-btn:hover {
-  opacity: 1;
-}
-
-.delete-btn {
-  background: #ff5959;
-  border: none;
-  color: #fff;
-  font-size: 16px;
-  margin-left: 4px; /* 原本8px改为4px，更紧凑 */
-  cursor: pointer;
-  border-radius: 50%;
-  width: 24px;
-  height: 24px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 0;
-  line-height: 1; /* 保证×居中 */
-  transition: background 0.2s, transform 0.2s;
-}
-.delete-btn:hover {
-  background: #e04545;
-  transform: scale(1.05);
 }
 </style>

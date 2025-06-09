@@ -30,8 +30,7 @@
 <style scoped>
 .admin-home {
   padding: 20px;
-  /* 修改：更深的文字颜色，确保浅色模式下也清晰可读 */
-  color: #333; /* 覆盖浅色模式下过浅的全局变量颜色 */
+  color: #333; /* 浅色模式下：深灰色 */
 }
 
 .admin-home h2 {
@@ -44,10 +43,19 @@
   margin-top: 10px;
   list-style: disc inside;
   line-height: 1.6;
-  color: #555; /* 二级文字用略浅的深灰色，增强对比度 */
+  color: #555; /* 浅色模式下：二级文字深灰色 */
 }
 
 .features-list li {
   margin-bottom: 6px;
+}
+
+/* ====== 深色模式：提升对比度 ====== */
+:root.dark .admin-home {
+  color: #ddd; /* 深色模式下：主文字更亮 */
+}
+
+:root.dark .features-list {
+  color: #bbb; /* 深色模式下：二级文字更亮 */
 }
 </style>
