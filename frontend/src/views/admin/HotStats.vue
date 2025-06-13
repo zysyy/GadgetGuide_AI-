@@ -1,4 +1,3 @@
-<!-- src/views/admin/HotStats.vue -->
 <template>
   <div>
     <h2 class="page-title">热词统计</h2>
@@ -23,6 +22,7 @@
         <el-table-column prop="word" label="热词" />
         <el-table-column prop="count" label="出现次数" width="100"/>
       </el-table>
+
       <div class="cloud-title">词云可视化</div>
       <div class="cloud-wrap">
         <div ref="cloudRef" class="wordcloud-box"></div>
@@ -36,29 +36,35 @@
 import WordCloud from 'wordcloud'
 import { ref, onMounted, nextTick } from 'vue'
 
+// 热词数据
 const hotWords = ref<{ word: string, count: number }[]>([])
 const cloudRef = ref<HTMLDivElement | null>(null)
 
+// 请求后台热词
 async function fetchHotWords() {
-  // 假设后端接口为 /admin/hot-words，返回 [{word, count}]
   const res = await fetch('http://localhost:8000/admin/hot-words', {
     headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
   })
   hotWords.value = res.ok ? await res.json() : []
 }
 
+// 初始化词云
 onMounted(async () => {
   await fetchHotWords()
-  // 词云绘制
+
+  // 绘制词云
   nextTick(() => {
     if (cloudRef.value && hotWords.value.length) {
-      const data = hotWords.value.slice(0, 30).map(item => [item.word, item.count])
+      const data = hotWords.value.slice(0, 30).map(item => [item.word.trim(), item.count])
+
       WordCloud(cloudRef.value, {
         list: data,
         gridSize: 12,
-        weightFactor: 15,
-        minSize: 10,
-        fontFamily: 'PingFang SC, Helvetica Neue, Arial, sans-serif',
+        // ✅ 修复中文乱码：使用支持中文的字体
+        fontFamily: 'PingFang SC, Microsoft YaHei, SimHei, sans-serif',
+        // ✅ 避免文字太小
+        weightFactor: (count: number) => count * 3,
+        minSize: 12,
         color: () => {
           const palette = ['#3573fa', '#f8b74a', '#8eaccb', '#f76560', '#8186a3']
           return palette[Math.floor(Math.random() * palette.length)]
@@ -67,7 +73,8 @@ onMounted(async () => {
         rotateRatio: 0.1,
         shuffle: true,
         drawOutOfBound: false,
-        hover: window.innerWidth > 700,
+        // ✅ 修复报错：hover 必须是函数或 undefined，不能是布尔值
+        hover: undefined,
       })
     }
   })
@@ -122,6 +129,7 @@ onMounted(async () => {
 .rank-1 { color: #ff9b23; font-size: 1.19em; }
 .rank-2 { color: #ffcd52; font-size: 1.15em; }
 .rank-3 { color: #3573fa; font-size: 1.14em; }
+
 .cloud-title {
   font-size: 1.1em;
   font-weight: 500;
@@ -144,6 +152,7 @@ onMounted(async () => {
   margin-top: 0;
   border: 1px dashed #dde5ed;
 }
+
 @media (max-width: 900px) {
   .hotstats-card { max-width: 97vw; }
   .wordcloud-box { width: 98vw; min-width: 260px; }

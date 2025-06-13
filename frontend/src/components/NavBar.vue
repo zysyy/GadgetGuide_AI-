@@ -1,10 +1,11 @@
+<!-- src/components/NavBar.vue -->
 <template>
   <header class="navbar">
     <div class="navbar-left">
       <span class="app-title">GadgetGuide AI</span>
     </div>
     <div class="navbar-right">
-      <!-- 只有管理员显示“切换”按钮 -->
+      <!-- 管理员显示“切换”按钮 -->
       <button
         v-if="isAdmin"
         class="nav-btn"
@@ -12,6 +13,17 @@
       >
         {{ switchBtnLabel }}
       </button>
+
+      <!-- 登录状态显示退出按钮 -->
+      <button
+        v-if="isLoggedIn"
+        class="nav-btn"
+        @click="logout"
+      >
+        退出登录
+      </button>
+
+      <!-- 切换主题 -->
       <slot name="right" />
       <button class="theme-btn" @click="$emit('toggle-theme')">
         <span v-if="isDark">☀️ 浅色</span>
@@ -31,9 +43,8 @@ const router = useRouter()
 const route = useRoute()
 const userStore = useUserStore()
 
-// ------- 关键1：刷新后自动恢复登录状态（可选，推荐放在 App.vue） -------
+// 恢复用户状态
 onMounted(() => {
-  // 从 localStorage 恢复
   const raw = localStorage.getItem('user')
   if (raw) {
     try {
@@ -42,7 +53,6 @@ onMounted(() => {
     } catch {}
   }
 })
-// 每次登录 setUser 后同步存 localStorage
 userStore.$subscribe((_mutation, state) => {
   localStorage.setItem('user', JSON.stringify({
     id: state.id,
@@ -51,26 +61,31 @@ userStore.$subscribe((_mutation, state) => {
     token: state.token
   }))
 })
-// ------- 关键1 END -------
 
-// 管理员判断
+// 是否为管理员
 const isAdmin = computed(() => userStore.is_admin === true)
+// 是否已登录
+const isLoggedIn = computed(() => !!userStore.token)
 
-// 动态按钮文本
+// 动态按钮文字
 const switchBtnLabel = computed(() => {
-  if (route.path.startsWith('/admin')) {
-    return '进入聊天'
-  }
-  return '进入后台'
+  return route.path.startsWith('/admin') ? '进入聊天' : '进入后台'
 })
 
-// 切换路由
+// 路由切换
 function handleSwitch() {
   if (route.path.startsWith('/admin')) {
     router.push('/chat')
   } else {
     router.push('/admin')
   }
+}
+
+// 登出操作
+function logout() {
+  userStore.logout()
+  localStorage.removeItem('user')
+  router.push('/login')
 }
 </script>
 
