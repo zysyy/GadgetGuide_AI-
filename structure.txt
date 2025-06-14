@@ -1,0 +1,62 @@
+.
+├── backend
+│   ├── __init__.py
+│   ├── admin
+│   │   ├── __init__.py
+│   │   └── routes.py
+│   ├── auth
+│   │   ├── __init__.py
+│   │   ├── auth_utils.py
+│   │   ├── crud.py
+│   │   ├── deps.py
+│   │   ├── models.py
+│   │   ├── routes.py
+│   │   └── schemas.py
+│   ├── chat
+│   │   ├── __init__.py
+│   │   ├── crud.py
+│   │   ├── models.py
+│   │   ├── routes.py
+│   │   └── schemas.py
+│   ├── config.py
+│   ├── database.py
+│   ├── faiss_index
+│   │   ├── index.faiss
+│   │   ├── index.pkl
+│   │   └── processed_files.json
+│   ├── init_admin.py
+│   ├── knowledge_base_processor.py
+│   ├── main.py
+│   ├── qa_handler.py
+│   ├── qa_schemas.py
+│   ├── requirements.txt
+│   ├── uploads
+│   └── users.db
+├── frontend
+│   ├── index.html
+│   ├── package-lock.json
+│   ├── package.json
+│   ├── public
+│   │   └── vite.svg
+│   ├── README.md
+│   ├── src
+│   │   ├── App.vue
+│   │   ├── assets
+│   │   ├── components
+│   │   ├── env.d.ts
+│   │   ├── main.ts
+│   │   ├── router
+│   │   ├── stores
+│   │   ├── style.css
+│   │   ├── types
+│   │   ├── views
+│   │   └── vite-env.d.ts
+│   ├── tsconfig.app.json
+│   ├── tsconfig.json
+│   ├── tsconfig.node.json
+│   └── vite.config.ts
+├── LICENSE
+├── README.md
+└── structure.txt
+
+16 directories, 50 files

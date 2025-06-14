@@ -1,175 +1,296 @@
 # GadgetGuide AI
 
+## 项目说明
+
+本项目为个人学习和研究用途，聚焦于大语言模型与知识库问答系统的工程实现。通过完整开发一个智能电子产品问答平台，系统性实践了前后端分离架构设计、现代前端开发（Vue 3 + Element Plus）、后端 API 构建（FastAPI）、向量检索（FAISS）、语义嵌入（Ollama Embedding 模型）、以及调用云端大语言模型 API（DeepSeek）。
+
+本项目同时也探索了如何集成用户身份系统、对话管理、知识库动态索引更新、热词统计等功能模块，旨在提升对实际场景中 RAG 技术落地的理解能力，并积累完整的项目开发经验。项目仍在持续完善中，欢迎同行交流探讨。
+
+---
+
 ## 项目简介
 
-GadgetGuide AI 是一个基于自定义知识库的实用型电子产品问答与推荐系统。用户可以通过自然的语言提问，系统会根据已有的产品信息（如技术规格、评测等）给出相关的回答，并能够对不同产品进行特性对比。
+GadgetGuide AI 是一个基于自定义知识库的电子产品问答与推荐系统，用户可通过自然语言提问获取关于产品的技术规格、功能差异、使用建议等信息。系统结合语义检索（RAG）与大语言模型生成能力，能够提供基于文档内容的专业回答，同时支持多产品特性对比。
 
-本项目旨在探索和实践检索增强生成 (RAG) 技术在构建智能问答系统中的应用。目前主要聚焦于苹果产品作为示例知识库，未来可以扩展到更多品牌和产品。
+项目目前以苹果系列产品为初始知识库示例，支持上传 PDF/TXT 文档进行动态扩展。系统包含用户登录注册、聊天对话、知识库文档管理、会话记录管理、热词分析等完整功能模块，并通过管理员端接口支持索引刷新与用户数据管理。前端界面简洁实用，具备基础的交互优化体验。
 
-**当前版本:** `v0.2.0-alpha` (功能增强预发布版)
-* 后端核心RAG流程（包括对比问答）已实现并稳定工作。
-* 前端Vue.js聊天界面已搭建，可与后端交互，并对AI的Markdown回答进行渲染。
+本项目作为智能问答系统的工程化实践范例，具备良好的拓展潜力，可应用于教育问答、产品推荐、政策咨询等多个垂直场景。
 
-## 主要功能与特性 (v0.2.0-alpha)
 
-* **智能问答：** 用户可以通过Web聊天界面提问关于电子产品（当前主要为苹果产品）的信息。
-* **基于知识库的回答：** 系统的回答主要基于用户提供的本地知识库文档。
-* **✨ 产品信息对比：**
-    * 系统能够理解并处理涉及多个产品对比的查询（例如“iPhone A 与 iPhone B 对比有何升级?”）。
-    * 通过后端初步的实体识别和针对性的上下文分别检索策略，为大语言模型提供更均衡的对比信息。
-    * 优化了针对对比查询的Prompt，引导模型生成结构化的对比答案。
-* **动态知识库更新：**
-    * 支持通过 API 端点 (`/upload-documents/`) 上传新的知识库文档。
-    * 后端能够处理和索引多种格式的文档（目前已实现 `.txt` 和 `.pdf`）。
-* **优化的文本处理：**
-    * 后端文本分割器已从 `CharacterTextSplitter` 升级为 `RecursiveCharacterTextSplitter`，并配置了更适合技术文档的分割参数，旨在提高检索上下文的质量。
-* **Web用户界面 (Vue.js)：**
-    * 提供一个基础但功能完善的聊天界面与用户交互。
-    * AI 回答中的 Markdown 格式（如加粗、列表、代码块等）能够正确渲染，提升了信息的可读性。
-    * 优化了中文输入法环境下回车键可能导致消息意外发送的问题。
-    * 初步应用了新的“科技感”配色主题，改善了视觉体验。
-    * 包含初始欢迎消息、加载状态提示和错误信息反馈。
+
+**当前版本:** `v0.3.0-beta`（Beta 测试版，支持知识库管理、管理员功能与对话记录系统）
+
+* 后端核心 RAG 流程已实现并稳定运行，支持基于向量检索的知识问答与产品信息对比生成。
+* 前端基于 Vue 3 构建，已完成与后端的集成，可进行自然语言提问与 AI 答复交互。
+* 支持 Markdown 格式的回答展示（含表格、列表、代码块等），提升信息呈现的可读性。
+* 新增知识库文档管理系统，支持上传、删除、刷新索引等操作，便于知识内容的迭代更新。
+* 引入用户会话记录系统，支持多轮对话保存与切换，提升用户体验与交互连贯性。
+* 管理员可访问后台查看用户列表、会话历史与系统热词统计，用于优化问答系统内容。
+
+---
+
+## 主要功能与特性（v0.3.0-beta）
+
+### 💬 智能问答系统
+- 用户可通过自然语言提问系统内置的电子产品知识（目前以苹果产品为主）。
+- 支持基于自定义知识库的检索增强生成（RAG）方式回答，确保答案可追溯。
+- 自动标注答案来源（“参考信息生成”或“AI自由回答”），提升透明度。
+
+### 🔍 产品对比能力
+- 系统可识别对比类查询（如“iPhone 14 与 iPhone 15 有何不同”），对不同产品分别检索信息。
+- 对比答案以标准 Markdown 表格格式返回，便于用户直观查看差异。
+
+### 📚 知识库管理（仅管理员）
+- 支持上传 `.txt` 和 `.pdf` 文档，作为问答系统的知识源。
+- 支持规范化文件名、删除文档、主动刷新向量索引等操作。
+- 所有文档存储于本地 `uploads/` 目录，索引基于 FAISS 构建并持久化。
+
+### 👤 用户与会话管理
+- 用户登录后可查看、切换历史会话，支持重命名、新建、删除会话等操作。
+- 所有消息自动关联会话记录，支持滚动查看和持续提问。
+
+### 🛠 管理员后台功能
+- 查看所有注册用户信息及其对话记录。
+- 热词统计模块基于消息内容自动分词并统计高频词，辅助分析用户关注重点。
+
+### 🌗 界面交互与体验优化
+- “AI 正在输入...” 动画提示，模拟真实对话过程。
+- 自适应暗/亮主题切换。
+- 所有操作状态反馈明确（如上传进度、索引刷新结果、异常提示等）。
+
+---
 
 ## 技术栈
 
-* **后端：**
-    * Python 3.9+ (建议通过 Conda 管理)
-    * FastAPI: 高性能 Web 框架
-    * LangChain: LLM 应用开发框架，用于编排 RAG 流程
-    * Ollama (`bge-m3`): 本地运行的文本嵌入模型
-    * FAISS: 高效的向量相似性搜索引擎
-    * DeepSeek API: 用于生成最终答案的大语言模型
-    * `python-dotenv`: 管理环境变量
-    * `uvicorn`: ASGI 服务器
-    * `pypdf`: 用于处理 PDF 文档
-* **前端：**
-    * Node.js LTS (例如 v22.x.x，建议通过 NVM 管理)
-    * Vue.js 3 (使用 Vue CLI 创建)
-    * Axios: 用于与后端 API 通信
-    * Marked: Markdown 解析库
-    * DOMPurify: HTML 清理库
-* **开发与版本控制：**
-    * Git & GitHub
+### 🧠 后端技术
+
+- **Python 3.9+**：主要开发语言，结合 FastAPI 与 LangChain 构建 AI 应用后端。
+- **FastAPI**：高性能 Web API 框架，提供接口服务。
+- **LangChain**：用于构建 RAG（检索增强生成）问答流程。
+- **Ollama + bge-m3**：本地部署的文本嵌入模型，用于生成向量。
+- **FAISS**：Facebook 提供的高效向量索引与相似度搜索引擎。
+- **DeepSeek API**：调用远程大语言模型，为用户问题生成自然语言回答。
+- **SQLite**：轻量级数据库，管理用户、会话与消息等数据。
+- **pypdf / TextLoader**：加载并解析 PDF 与 TXT 格式文档作为知识库内容。
+- **Uvicorn**：ASGI 服务器，搭配 FastAPI 启动服务。
+- **python-dotenv**：用于读取和管理 `.env` 环境变量配置。
+
+### 💻 前端技术
+
+- **Vue 3**：构建现代化、响应式用户界面。
+- **Element Plus**：Vue 3 UI 组件库，提供丰富的前端组件支持。
+- **Axios**：发送异步请求，与后端 API 进行数据通信。
+- **Marked + DOMPurify**：解析并安全渲染 AI 回复中的 Markdown 内容。
+- **主题切换机制**：支持亮色 / 暗色主题，改善用户体验。
+
+### 🛠 开发环境与工具
+
+- **Visual Studio Code (VSCode)**：主力开发工具，支持前后端代码高效编写与调试。
+- **Node.js LTS**：前端构建与运行环境，推荐使用稳定版。
+- **Conda / pip**：管理 Python 依赖环境。
+- **Git & GitHub**：版本控制与协作开发平台。
+
+---
 
 ## 项目结构
+
 ```
-/GadgetGuide_AI_Project  (项目根目录)
-├── backend/          # 后端 FastAPI 应用
-│   ├── main.py       # FastAPI 应用主文件与 API 路由
-│   ├── knowledge_base_processor.py # 知识库处理模块
-│   ├── qa_handler.py # 问答逻辑处理模块
-│   ├── schemas.py    # Pydantic 模型 (可选)
-│   ├── config.py     # 配置信息
-│   ├── uploads/      # 存放知识库源文档 (请将文档放于此处)
-│   ├── faiss_index/  # 存放生成的 FAISS 索引 (自动生成)
-│   ├── .env          # 环境变量文件 (需手动创建)
-│   └── requirements.txt # Python 依赖
-│
-├── frontend/         # 前端 Vue.js 应用
-│   ├── public/
+GadgetGuide_AI_Project/
+├── backend/                  # 后端 FastAPI 应用
+│   ├── main.py               # 应用入口
+│   ├── config.py             # 配置信息
+│   ├── database.py           # 数据库连接与初始化
+│   ├── init_admin.py         # 初始管理员创建脚本
+│   ├── knowledge_base_processor.py  # 知识库构建与管理模块
+│   ├── qa_handler.py         # 问答处理逻辑（包含上下文检索、对比问答等）
+│   ├── qa_schemas.py         # 问答接口的数据模型定义
+│   ├── uploads/              # 用户上传的知识库文档
+│   ├── faiss_index/          # FAISS 索引文件存储位置
+│   ├── users.db              # SQLite 数据库文件
+│   ├── auth/                 # 用户认证模块
+│   │   ├── routes.py         # 注册、登录等 API 路由
+│   │   ├── models.py         # 用户数据模型
+│   │   ├── crud.py           # 数据库操作函数
+│   │   ├── schemas.py        # 请求/响应数据结构定义
+│   ├── chat/                 # 聊天记录系统
+│   │   ├── routes.py         # 会话与消息 API
+│   │   ├── models.py         # 会话与消息数据库模型
+│   │   ├── crud.py           # 聊天记录相关数据库操作
+│   ├── admin/                # 管理员功能模块
+│   │   └── routes.py         # 用户管理、文件管理、索引刷新、热词统计等
+│   └── requirements.txt      # Python 依赖列表
+
+├── frontend/                 # 前端 Vue 3 应用
+│   ├── index.html            # 入口 HTML 文件
+│   ├── package.json          # 项目依赖配置
 │   ├── src/
-│   │   ├── App.vue
-│   │   ├── main.js
-│   │   ├── assets/     # 存放全局静态资源如 theme.css
-│   │   │   └── css/
-│   │   │       └── theme.css
-│   │   └── components/
-│   │       └── ChatInterface.vue
-│   ├── package.json
-│   └── ...           (其他 Vue 项目文件)
-│
-├── .gitignore        # Git 忽略规则
-└── README.md         # 本文件
+│   │   ├── App.vue           # 应用主组件
+│   │   ├── main.ts           # 应用入口逻辑
+│   │   ├── assets/           # 样式与资源（如主题切换样式等）
+│   │   ├── components/       # 页面组件（聊天窗、消息气泡、动画等）
+│   │   ├── views/            # 路由视图（聊天页、后台管理页等）
+│   │   ├── router/           # Vue Router 配置
+│   │   ├── stores/           # Pinia 状态管理模块（如用户状态、会话管理）
+│   │   └── types/            # 类型定义
+│   └── vite.config.ts        # 前端构建配置
+
+├── LICENSE
+├── README.md
+└── structure.txt             # 项目结构导出（仅文档用）
 ```
+
+---
 
 ## 环境搭建与运行指南
 
 ### 1. 先决条件
 
-* **Python:** 3.9 或更高版本 (通过 Conda 管理)。
-* **Node.js:** LTS 版本 (例如 v22.x.x，通过 NVM 管理)。
-* **Ollama:** 已安装并正在运行，且已拉取 `bge-m3` 模型 (`ollama pull bge-m3`)。
-* **DeepSeek API Key:** 准备好您的有效 DeepSeek API 密钥。
+请确保你的开发环境已具备以下组件：
+
+- **Python ≥ 3.9**（建议使用 Conda 管理虚拟环境）
+
+- **Node.js ≥ 18.x**（建议通过 NVM 安装 LTS 版本）
+
+- **Ollama**（本地嵌入模型，已拉取 bge-m3）
+
+- **DeepSeek API Key**（需要提前申请并配置）
+
+- **Git**（用于克隆项目）
 
 ### 2. 后端设置与启动
 
-1.  **克隆仓库/准备项目文件。**
-    ```bash
-    git clone https://github.com/zysyy/GadgetGuide_AI-.git
+1. **克隆仓库/准备项目文件**
+   ```bash
+   git clone https://github.com/zysyy/GadgetGuide_AI-.git
+   cd GadgetGuide_AI-
     ```
-2.  **Conda 环境：**
+2. **Conda 环境激活**
     ```bash
-    conda activate aihomework # (或您使用的环境名)
+    conda activate aihomework  # (或使用你的 Conda 环境名)
     ```
-3.  **安装 Python 依赖：**
-    进入 `backend` 目录：
+3. **安装 Python 依赖**
     ```bash
     cd backend
     pip install -r requirements.txt
     ```
-4.  **创建并配置 `.env` 文件：**
-    在 `backend` 目录下创建 `.env` 文件，内容为：
+4. **创建并配置 .env 文件**
+    在 backend/ 目录下创建 .env 文件，内容如下（替换为你自己的 API Key）：
     ```env
     DEEPSEEK_API_KEY="your_actual_deepseek_api_key"
     ```
-5.  **准备知识库源文件：**
-    将您的 `.txt`, `.pdf` 等文档放入 `backend/uploads/` 目录。
-6.  **启动后端 FastAPI 服务器：**
-    确保您位于项目**根目录** (`GadgetGuide_AI_Project`)，运行：
+5. **准备知识库源文件**
+    将你的 .txt 或 .pdf 格式知识文件放入以下目录中：
+    ```bash
+    backend/uploads/
+    ```
+6. **启动 FastAPI 后端服务**
+    回到项目根目录，运行：
     ```bash
     uvicorn backend.main:app --reload --port 8000
     ```
-    服务器将运行在 `http://127.0.0.1:8000`。
+    成功后，API 文档地址为： http://127.0.0.1:8000/docs
+7. **构建知识库索引**
+   ✅ 方式一（推荐）：上传文档触发索引
 
-7.  **构建知识库索引：**
-    * **方式一 (推荐，更灵活)：** 后端启动后，使用 API 测试工具 (如 Postman 或 FastAPI 的 `/docs` 页面) 向 `POST /upload-documents/` 端点上传您在 `backend/uploads/` 目录中准备好的文件。
-    * **方式二 (快速测试)：** 确保 `backend/main.py` 中的 `/build_index_from_sample` 端点内 `sample_files` 列表包含了您 `backend/uploads/` 目录下想要索引的准确文件名，然后通过 API 测试工具或浏览器（如果临时改为GET）发送 POST 请求到 `http://127.0.0.1:8000/build_index_from_sample`。
-    观察后端终端日志确认索引成功创建。
+        打开 http://127.0.0.1:8000/docs
+
+        使用 POST /admin/upload-documents/ 接口上传文档，即可自动建立或刷新索引。
+
+    ⚙️ 方式二（快速测试）：直接构建索引
+
+        调用 POST /admin/refresh-index 接口（无需传参），系统将基于当前 uploads/ 文件夹中全部文件进行索引重建。
+
+    构建完成后，控制台将输出日志确认处理状态。
 
 ### 3. 前端设置与启动
 
-1.  **安装 Node.js 依赖：**
-    打开新的终端窗口，进入 `frontend` 目录：
+1. **进入前端项目目录**
+   ```bash
+   cd frontend
+   ```
+2. **安装依赖**
+    项目基于 Vue 3 + Vite 开发，使用以下命令安装所需依赖：
     ```bash
-    cd GadgetGuide_AI_Project/frontend # (确保路径正确)
-    npm install # 或 yarn install
-    ```
-2.  **（如果尚未创建）创建全局样式文件：**
-    确保 `frontend/src/assets/css/theme.css` 文件存在，并包含您定义的 CSS 变量和全局样式。
-3.  **（如果尚未导入）在 `frontend/src/main.js` 中导入全局样式：**
-    ```javascript
-    // frontend/src/main.js
-    import { createApp } from 'vue'
-    import App from './App.vue'
-    import './assets/css/theme.css' // 确保路径正确
-
-    createApp(App).mount('#app')
-    ```
-4.  **启动前端开发服务器：**
+    npm install
+    # 或使用 yarn（如果已安装）
+    # yarn install
+   ```
+3. **运行开发服务器**
+    启动前端开发服务器：
     ```bash
-    npm run serve # 或 yarn serve
+    npm run dev
+    # 或 yarn dev
     ```
-    前端应用通常运行在 `http://localhost:8080`。
+4. **访问页面**
+    在浏览器中访问：
+    ```
+    http://localhost:5173
+    ```
+    默认界面为登录界面
+5. **其他说明**
+    - 若你修改了 API 地址或端口（如后端部署在远程服务器），请在 frontend/src/config.ts 中调整 API_BASE 常量；
 
-5.  **访问应用：**
-    在浏览器中打开前端地址 (例如 `http://localhost:8080`)。
+    - 系统支持亮暗主题切换，可通过右上角按钮快速切换界面风格；
 
-## API 端点 (通过 FastAPI `/docs` 查看详情)
+    - 管理员可通过前端导航进入“后台管理”模块，上传知识文档、查看热词、管理用户数据等。
+## API 端点（通过 FastAPI `/docs` 页面可交互测试）
 
-* `POST /ask`: 核心问答接口。
-* `POST /upload-documents/`: 上传新文档以更新知识库。
-* `POST /build_index_from_sample`: 基于预设文件列表构建/重建索引。
-* `POST /retrieve_context`: (调试用) 仅检索并返回上下文。
+系统提供以下主要 API 接口，前后端交互及管理员操作均基于这些端点实现：
+
+### 用户问答相关（公开接口）
+- `POST /ask`  
+  用户提问主接口，接收自然语言问题并返回基于知识库或 AI 的回答。
+
+- `POST /retrieve_context`  
+  （调试用）仅返回知识库检索到的上下文内容，用于排查问题或优化回答。
+
+
+
+### 文件上传与知识库管理（需管理员权限）
+- `POST /admin/upload-documents/`  
+  上传新的 `.pdf` / `.txt` 文档，并重建知识库索引。
+
+- `POST /admin/refresh-index`  
+  不上传文件，仅基于当前 `uploads/` 目录中所有文件刷新知识库索引。
+
+- `GET /admin/uploaded-files`  
+  获取所有已上传文档的列表（含文件名、大小与上传时间）。
+
+- `DELETE /admin/uploaded-files/{filename}`  
+  删除指定上传文档，并刷新索引。
+
+
+
+### 会话与聊天记录管理（需登录）
+- `GET /admin/users`  
+  获取所有注册用户列表（仅管理员）。
+
+- `GET /admin/users/{user_id}/conversations`  
+  查看某个用户的所有会话（仅管理员）。
+
+- `GET /admin/conversations/{conversation_id}/messages`  
+  获取指定会话中的所有消息内容（仅管理员）。
+
+
+
+### 统计分析（需管理员权限）
+- `GET /admin/hot-words?top_n=30`  
+  统计当前所有聊天记录中的高频词（用于知识库补全参考）。
+
+---
 
 ## 未来工作 (TODO)
 
-* 进一步完善前端的知识库文档上传界面和用户体验。
-* 根据更多测试结果，持续优化 Prompt Engineering 和答案的相关性、准确性。
-* 探索更高级的检索策略（如元数据过滤、结果重排序）以应对更复杂的场景。
-* 增强错误处理和日志记录。
-* （可选）实现用户注册登录和聊天历史保存功能。
+- **知识库多格式支持：** 当前系统支持 `.txt` 与 `.pdf` 格式文档上传，未来计划扩展至 `.docx`、`.md` 等主流文档类型，增强文档兼容性与来源多样性。
+- **知识自动补全机制：** 基于热词统计结果，智能分析用户关注高频词与知识盲区，辅助管理员自动推荐/抓取外部资料，提升知识覆盖率。
+- **大模型调用接口抽象化：** 当前系统使用 DeepSeek API 提供问答能力，后续计划抽象模型调用接口，允许用户自由选择本地部署模型或其他云端大模型（如 ChatGLM、通义千问等），提升灵活性与可扩展性。
+- **垂直场景拓展：** 除电子产品外，可逐步扩展至教育问答、法律咨询、医学导诊等垂直领域，通过更换知识源构建模块化智能问答平台。
+- **图像与语音输入支持：** 为提升多模态交互能力，系统计划引入图像上传识别与语音识别功能，拓展用户输入方式，优化用户体验。
+- **前端界面优化与适配：** 持续优化响应式布局与用户交互动画，提升在不同分辨率设备上的可用性；引入主题个性化设置与快捷操作组件。
+- **用户权限与日志系统：** 加强用户权限控制体系（如多级管理员支持）与日志审计功能，便于系统运维与安全管理。
+- **性能与稳定性提升：** 进一步优化嵌入生成、索引构建等流程的性能表现，支持更大规模文档的处理与更高并发访问。
 
 ---
 
 作者：The_Riddler
-日期：2025年5月10日 
+日期：2025年6月16日 

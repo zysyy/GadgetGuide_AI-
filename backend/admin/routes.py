@@ -87,6 +87,33 @@ def conversation_messages(
         } for m in messages
     ]
 
+import re  # 新增导入
+
+def normalize_filename(filename: str) -> str:
+    """
+    规范化文件名：
+    - 保留中文、英文、数字、下划线、连字符、括号
+    - 替换中文括号为英文括号
+    - 将空格和非法字符替换为下划线
+    """
+    name, ext = os.path.splitext(filename)
+    name = name.replace("（", "(").replace("）", ")")
+    name = re.sub(r"[^\u4e00-\u9fa5a-zA-Z0-9_\-()]", "_", name)
+    name = re.sub(r"_+", "_", name).strip("_")
+    return f"{name}{ext.lower()}"  # 统一扩展名小写
+
+def resolve_filename_conflict(base_dir: Path, filename: str) -> str:
+    """
+    如果文件已存在，自动添加数字后缀避免冲突。
+    """
+    counter = 1
+    target = base_dir / filename
+    name, ext = os.path.splitext(filename)
+    while target.exists():
+        target = base_dir / f"{name}_{counter}{ext}"
+        counter += 1
+    return target.name
+
 # ==== 4. 管理员上传文件并更新知识库索引 ====
 @router.post("/upload-documents/", summary="上传文件并更新知识库索引（仅管理员）")
 async def admin_upload_documents(
@@ -100,14 +127,16 @@ async def admin_upload_documents(
     files_to_index = []
 
     for file in files:
-        file_path = Path(UPLOAD_FOLDER) / file.filename
+        cleaned = normalize_filename(file.filename)
+        final_name = resolve_filename_conflict(Path(UPLOAD_FOLDER), cleaned)
+        file_path = Path(UPLOAD_FOLDER) / final_name
         try:
             with open(file_path, "wb+") as buffer:
                 shutil.copyfileobj(file.file, buffer)
-            files_to_index.append(file.filename)
-            processed_files_info.append({"filename": file.filename, "status": "上传成功"})
+            files_to_index.append(final_name)
+            processed_files_info.append({"filename": final_name, "status": "上传成功"})
         except Exception as e:
-            processed_files_info.append({"filename": file.filename, "status": "上传失败", "error": str(e)})
+            processed_files_info.append({"filename": final_name, "status": "上传失败", "error": str(e)})
         finally:
             file.file.close()
     
@@ -115,7 +144,10 @@ async def admin_upload_documents(
         raise HTTPException(status_code=400, detail="文件保存失败，无法建立索引。")
 
     # 上传后重新构建所有文件的索引（不是只针对新上传的文件，而是全部）
-    all_files = [f for f in os.listdir(UPLOAD_FOLDER) if os.path.isfile(os.path.join(UPLOAD_FOLDER, f))]
+    all_files = [
+        f for f in os.listdir(UPLOAD_FOLDER)
+        if os.path.isfile(os.path.join(UPLOAD_FOLDER, f)) and f.lower().endswith((".pdf", ".txt"))
+    ]
     if create_index_from_files(all_files):
         reload_vector_db()
         return {
@@ -187,3 +219,33 @@ def get_hot_words(
     # 高频词统计
     count = Counter(filtered)
     return [{"word": w, "count": c} for w, c in count.most_common(top_n)]
+
+# ==== 8. 主动刷新全部索引 ====
+@router.post("/refresh-index", summary="刷新知识库索引（基于当前所有文件）", tags=["admin"])
+def refresh_index(admin: User = Depends(admin_required)):
+    """
+    主动刷新 FAISS 索引（不上传，仅重新读取 uploads 文件夹内容）。
+    """
+    try:
+        # 读取 uploads 文件夹中所有合法后缀的文件
+        all_files = [
+            f for f in os.listdir(UPLOAD_FOLDER)
+            if os.path.isfile(os.path.join(UPLOAD_FOLDER, f))
+            and f.lower().endswith((".txt", ".pdf"))
+        ]
+
+        if not all_files:
+            raise HTTPException(status_code=404, detail="知识库中没有可索引文件")
+
+        # 重新构建索引并保存
+        if create_index_from_files(all_files):
+            reload_vector_db()
+            return {
+                "success": True,
+                "message": f"索引刷新成功，共处理 {len(all_files)} 个文件。",
+                "files": all_files
+            }
+        else:
+            raise HTTPException(status_code=500, detail="索引刷新失败，请检查后端日志")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"索引刷新出错：{str(e)}")

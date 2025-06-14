@@ -1,4 +1,3 @@
-<!-- src/views/admin/KnowledgeManage.vue -->
 <template>
   <div>
     <h2>知识库管理</h2>
@@ -6,7 +5,12 @@
     <!-- 文件列表 -->
     <el-card style="margin-bottom: 18px;">
       <template #header>
-        <span>已上传文件</span>
+        <div class="card-header">
+          <span>已上传文件</span>
+          <el-button type="primary" size="small" @click="refreshIndex" :loading="refreshing">
+            🔄 刷新索引
+          </el-button>
+        </div>
       </template>
       <el-table :data="files" style="width: 100%" v-loading="fileLoading" size="small">
         <el-table-column prop="filename" label="文件名" />
@@ -64,6 +68,7 @@ const token = localStorage.getItem("token")
 const files = ref<any[]>([])
 const fileLoading = ref(false)
 const uploadResult = ref("")
+const refreshing = ref(false)
 
 // 文件大小格式化
 function formatSize(size: number) {
@@ -107,7 +112,7 @@ async function deleteFile(filename: string) {
     const data = await res.json()
     if (res.ok) {
       ElMessage.success(data.message || "文件已删除")
-      loadFiles() // 刷新文件列表
+      loadFiles()
     } else {
       ElMessage.error(data.detail || "删除失败")
     }
@@ -136,11 +141,38 @@ async function handleUpload(option: any) {
   }
 }
 
+// 刷新索引
+async function refreshIndex() {
+  refreshing.value = true
+  try {
+    const res = await fetch(`${API_BASE}/admin/refresh-index`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${token}` }
+    })
+    const data = await res.json()
+    if (res.ok) {
+      ElMessage.success(data.message || "索引刷新成功")
+      loadFiles()
+    } else {
+      ElMessage.error(data.detail || "索引刷新失败")
+    }
+  } catch (e: any) {
+    ElMessage.error(e.message || "网络错误")
+  } finally {
+    refreshing.value = false
+  }
+}
+
 onMounted(loadFiles)
 </script>
 
 <style scoped>
 .text-gray-400 {
   color: #888;
+}
+.card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
 }
 </style>
